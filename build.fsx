@@ -36,8 +36,6 @@ open FSharp.Json
 
 [<AutoOpen>]
 module private Utils =
-  let runtimeToPubDir (runtime: string) = sprintf "publish/%s" runtime
-
   let getConfiguration (input: string option) =
     input
     |> Option.map (fun s -> s.ToLower())
@@ -73,7 +71,16 @@ Target.initEnvironment ()
 
 let args = Target.getArguments ()
 
-Target.create "Build" (fun _ -> ())
+Target.create "Build" (fun _ ->
+  let conf =
+    args
+    |> Option.bind Array.tryHead
+    |> getConfiguration
+
+  !! "./*.*proj"
+  ++ "libs/**/*.*proj"
+  |> Seq.iter (DotNet.build (fun p -> { p with Configuration = conf }))
+)
 
 Target.create
   "Format.CSharp"
