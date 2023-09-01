@@ -36,5 +36,5 @@ jobs:
     - name: Check Format
       run: dotnet fsi build.fsx -t format.check
 
-    - name: Build (Debug)
+    - name: Build .NET project (Debug)
       run: dotnet fsi build.fsx -t build -- debug
