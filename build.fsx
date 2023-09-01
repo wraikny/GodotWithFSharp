@@ -71,16 +71,17 @@ Target.initEnvironment ()
 
 let args = Target.getArguments ()
 
-Target.create "Build" (fun _ ->
-  let conf =
-    args
-    |> Option.bind Array.tryHead
-    |> getConfiguration
+Target.create
+  "Build"
+  (fun _ ->
+    let conf =
+      args
+      |> Option.bind Array.tryHead
+      |> getConfiguration
 
-  !! "./*.*proj"
-  ++ "libs/**/*.*proj"
-  |> Seq.iter (DotNet.build (fun p -> { p with Configuration = conf }))
-)
+    !! "./*.*proj" ++ "libs/**/*.*proj"
+    |> Seq.iter (DotNet.build (fun p -> { p with Configuration = conf }))
+  )
 
 Target.create
   "Format.CSharp"
