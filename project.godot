@@ -11,9 +11,9 @@ config_version=5
 [application]
 
 config/name="GodotWithFSharp"
-run/main_scene="res://node_2d.tscn"
+run/main_scene="res://scene/node_2d.tscn"
 config/features=PackedStringArray("4.1", "C#", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="res://resource/image/icon.svg"
 
 [dotnet]
 
