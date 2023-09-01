@@ -1,0 +1,32 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GodotWithFSharp", "GodotWithFSharp.csproj", "{F1A11B5E-A90F-44C1-8A26-148D56C37C91}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libs", "libs", "{A25300D4-6014-49D0-9056-8BF6BDE39F84}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSLib", "libs\FSLib\FSLib.fsproj", "{E2A107A6-7649-42AD-AFF8-6421ED08BE90}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		ExportDebug|Any CPU = ExportDebug|Any CPU
+		ExportRelease|Any CPU = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F1A11B5E-A90F-44C1-8A26-148D56C37C91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1A11B5E-A90F-44C1-8A26-148D56C37C91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1A11B5E-A90F-44C1-8A26-148D56C37C91}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{F1A11B5E-A90F-44C1-8A26-148D56C37C91}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{F1A11B5E-A90F-44C1-8A26-148D56C37C91}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{F1A11B5E-A90F-44C1-8A26-148D56C37C91}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90}.ExportRelease|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90}.ExportRelease|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E2A107A6-7649-42AD-AFF8-6421ED08BE90} = {A25300D4-6014-49D0-9056-8BF6BDE39F84}
+	EndGlobalSection
+EndGlobal
