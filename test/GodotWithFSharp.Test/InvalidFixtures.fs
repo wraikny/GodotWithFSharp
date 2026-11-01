@@ -1,5 +1,6 @@
 namespace GodotWithFSharp.Test
 
+open System
 open Godot
 open GodotWithFSharp
 
@@ -61,3 +62,27 @@ module InvalidFixtures =
 
     [<GenerateGodotOverride("")>]
     member _.OnReady() = ()
+
+  [<GenerateGodotNode("_Ready", typeof<Node>)>]
+  type ClassCollision(_node: Node) =
+    interface Impl<Node>
+
+    [<GenerateGodotOverride("_Ready")>]
+    member _.OnReady() = ()
+
+  [<GenerateGodotNode("PropertyCollisionNode", typeof<Node>)>]
+  type PropertyCollision(_node: Node) =
+    interface Impl<Node>
+
+    [<Export>]
+    member val _Ready = 0 with get, set
+
+    [<GenerateGodotOverride("_Ready")>]
+    member _.OnReady() = ()
+
+  [<GenerateGodotNode("UnsupportedExportNode", typeof<Node>)>]
+  type UnsupportedExport(_node: Node) =
+    interface Impl<Node>
+
+    [<Export>]
+    member val Value = DateTime.MinValue with get, set

@@ -1,4 +1,4 @@
-namespace GodotWithFSharp.CodeGenerator
+﻿namespace GodotWithFSharp.CodeGenerator
 
 open System
 open System.IO
@@ -8,7 +8,6 @@ open Microsoft.CodeAnalysis
 open Microsoft.CodeAnalysis.CSharp
 open Microsoft.CodeAnalysis.CSharp.Syntax
 open GodotWithFSharp.CodeGenerator.CSharpSyntax
-open GodotWithFSharp
 
 /// A generated source file. Generation itself has no filesystem side effects.
 type GeneratedFile = { Name: string; Content: string }
@@ -20,50 +19,9 @@ module Generator =
   let formatTypeName typ =
     (typeName typ).NormalizeWhitespace().ToFullString()
 
-  let private generateType ns (typ: Type) (attr: GenerateGodotNode) =
-    let name = identifier (attr.GetGodotName())
-    let baseType = attr.GetGodotType()
-
-    let fail message =
-      invalidArg "types" $"{typ.FullName}: {message}"
-
-    if attr.GetGodotName() = "Impl" then
-      fail "The generated class name 'Impl' conflicts with the runtime property."
-
-    if
-      isNull baseType
-      || not (typeof<Godot.Node>.IsAssignableFrom baseType)
-      || baseType.IsSealed
-      || baseType.ContainsGenericParameters
-    then
-      fail "The generated base type must be an inheritable Godot Node type."
-
-    if
-      not typ.IsVisible
-      || typ.IsAbstract
-      || typ.ContainsGenericParameters
-    then
-      fail "Implementation types must be public, concrete and closed."
-
-    let contract = typedefof<Impl<_>>.MakeGenericType(baseType)
-
-    if not (contract.IsAssignableFrom typ) then
-      fail $"Implement Impl<{baseType.FullName}>."
-
-    if
-      not (
-        typ.GetConstructors()
-        |> Array.exists (fun c ->
-          let ps = c.GetParameters()
-
-          ps.Length = 1
-          && ps.[0].ParameterType.IsAssignableFrom baseType
-        )
-      )
-    then
-      fail "A public constructor accepting the generated node is required."
-
-    let implType = typeName typ
+  let private generateType ns (node: NodeDefinition) =
+    let name = identifier node.Name
+    let implType = referenceName node.Implementation
     let members = Collections.Generic.List<MemberDeclarationSyntax>()
 
     let implProperty =
@@ -95,147 +53,74 @@ module Generator =
 
     members.Add constructor
 
-    for prop in
-      typ.GetProperties()
-      |> Array.sortBy _.Name do
-      let export = prop.GetCustomAttribute<Godot.ExportAttribute>(false)
+    for prop in node.Exports do
+      let hint =
+        SyntaxFactory.CastExpression(
+          referenceName (TypeReference.named "Godot.PropertyHint" [||]),
+          SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(prop.Hint))
+        )
 
-      if not (isNull export) then
-        if
-          prop.Name = "Impl"
-          || prop.Name = attr.GetGodotName()
-        then
-          fail $"Reserved property name: {prop.Name}."
+      let hintString =
+        SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(prop.HintString))
 
-        if
-          prop.GetIndexParameters().Length <> 0
-          || isNull prop.GetMethod
-          || isNull prop.SetMethod
-          || not prop.GetMethod.IsPublic
-          || not prop.SetMethod.IsPublic
-          || prop.GetMethod.IsStatic
-          || prop.SetMethod.IsStatic
-        then
-          fail $"Exported property '{prop.Name}' must have public instance get/set accessors."
+      let exportAttribute =
+        SyntaxFactory
+          .Attribute(referenceName (TypeReference.named "Godot.ExportAttribute" [||]) :?> NameSyntax)
+          .AddArgumentListArguments(SyntaxFactory.AttributeArgument(hint), SyntaxFactory.AttributeArgument(hintString))
 
-        let hint =
-          SyntaxFactory.CastExpression(
-            typeName typeof<Godot.PropertyHint>,
-            SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(int export.Hint))
-          )
+      let target = memberAccess (identifierName "Impl") prop.Name
 
-        let hintString =
-          SyntaxFactory.LiteralExpression(
-            SyntaxKind.StringLiteralExpression,
-            SyntaxFactory.Literal(if isNull export.HintString then "" else export.HintString)
-          )
+      let property =
+        SyntaxFactory
+          .PropertyDeclaration(referenceName prop.Type, identifier prop.Name)
+          .WithModifiers(modifiers [| SyntaxKind.PrivateKeyword |])
+          .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(exportAttribute)))
+          .AddAccessorListAccessors(getter target, setter target)
 
-        let exportAttribute =
-          SyntaxFactory
-            .Attribute(typeName typeof<Godot.ExportAttribute> :?> NameSyntax)
-            .AddArgumentListArguments(
-              SyntaxFactory.AttributeArgument(hint),
-              SyntaxFactory.AttributeArgument(hintString)
-            )
+      members.Add property
 
-        let target = memberAccess (identifierName "Impl") prop.Name
+    for method in node.Overrides do
+      let targetIdentifier = identifier method.Name
+      let ps = method.Parameters
 
-        let property =
-          SyntaxFactory
-            .PropertyDeclaration(typeName prop.PropertyType, identifier prop.Name)
-            .WithModifiers(modifiers [| SyntaxKind.PrivateKeyword |])
-            .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(exportAttribute)))
-            .AddAccessorListAccessors(getter target, setter target)
+      let parameters =
+        ps
+        |> Array.mapi (fun i p -> SyntaxFactory.Parameter(identifier $"arg{i}").WithType(referenceName p))
 
-        members.Add property
+      let arguments =
+        ps
+        |> Array.mapi (fun i _ -> SyntaxFactory.Argument(identifierName $"arg{i}"))
 
-    let overrideTargets = Collections.Generic.HashSet<MethodInfo>()
+      let call =
+        SyntaxFactory
+          .InvocationExpression(memberAccess (identifierName "Impl") method.ImplementationName)
+          .AddArgumentListArguments(arguments)
 
-    for method in
-      typ.GetMethods()
-      |> Array.sortBy (fun m -> m.ToString()) do
-      let overrideAttribute = method.GetCustomAttribute<GenerateGodotOverride>(false)
+      let statement: StatementSyntax =
+        if method.ReturnType = TypeReference.Void then
+          SyntaxFactory.ExpressionStatement(call) :> StatementSyntax
+        else
+          SyntaxFactory.ReturnStatement(call) :> StatementSyntax
 
-      if not (isNull overrideAttribute) then
-        let ps = method.GetParameters()
+      let declaration =
+        SyntaxFactory
+          .MethodDeclaration(referenceName method.ReturnType, targetIdentifier)
+          .WithModifiers(modifiers [| SyntaxKind.PublicKeyword; SyntaxKind.OverrideKeyword |])
+          .AddParameterListParameters(parameters)
+          .WithBody(SyntaxFactory.Block(statement))
 
-        let targetName =
-          match overrideAttribute.GetGodotName() with
-          | null -> method.Name
-          | name -> name
+      members.Add declaration
 
-        let targetIdentifier = identifier targetName
-
-        if
-          method.IsStatic
-          || method.IsGenericMethod
-          || ps
-             |> Array.exists (fun p -> p.ParameterType.IsByRef || p.IsOut)
-        then
-          fail $"Unsupported override signature: {method.Name}."
-
-        let baseMethod =
-          baseType.GetMethod(
-            targetName,
-            BindingFlags.Instance
-            ||| BindingFlags.Public,
-            null,
-            ps |> Array.map _.ParameterType,
-            null
-          )
-
-        if
-          isNull baseMethod
-          || not baseMethod.IsVirtual
-          || baseMethod.IsFinal
-          || baseMethod.ReturnType
-             <> method.ReturnType
-          || (baseMethod.GetParameters()
-              |> Array.map _.ParameterType)
-             <> (ps |> Array.map _.ParameterType)
-        then
-          fail $"No matching public virtual Godot method: {targetName} (implementation: {method.Name})."
-
-        if not (overrideTargets.Add baseMethod) then
-          fail $"Duplicate override target: {targetName}."
-
-        let parameters =
-          ps
-          |> Array.mapi (fun i p -> SyntaxFactory.Parameter(identifier $"arg{i}").WithType(typeName p.ParameterType))
-
-        let arguments =
-          ps
-          |> Array.mapi (fun i _ -> SyntaxFactory.Argument(identifierName $"arg{i}"))
-
-        let call =
-          SyntaxFactory
-            .InvocationExpression(memberAccess (identifierName "Impl") method.Name)
-            .AddArgumentListArguments(arguments)
-
-        let statement: StatementSyntax =
-          if method.ReturnType = typeof<Void> then
-            SyntaxFactory.ExpressionStatement(call) :> StatementSyntax
-          else
-            SyntaxFactory.ReturnStatement(call) :> StatementSyntax
-
-        let declaration =
-          SyntaxFactory
-            .MethodDeclaration(typeName method.ReturnType, targetIdentifier)
-            .WithModifiers(modifiers [| SyntaxKind.PublicKeyword; SyntaxKind.OverrideKeyword |])
-            .AddParameterListParameters(parameters)
-            .WithBody(SyntaxFactory.Block(statement))
-
-        members.Add declaration
-
-    let runtimeContract = typedefof<RuntimeObject<_, _>>.MakeGenericType(baseType, typ)
+    let runtimeContract =
+      TypeReference.named "GodotWithFSharp.RuntimeObject" [| node.BaseType; node.Implementation |]
 
     let declaration =
       SyntaxFactory
         .ClassDeclaration(name)
         .WithModifiers(modifiers [| SyntaxKind.PublicKeyword; SyntaxKind.PartialKeyword |])
         .AddBaseListTypes(
-          SyntaxFactory.SimpleBaseType(typeName baseType),
-          SyntaxFactory.SimpleBaseType(typeName runtimeContract)
+          SyntaxFactory.SimpleBaseType(referenceName node.BaseType),
+          SyntaxFactory.SimpleBaseType(referenceName runtimeContract)
         )
         .AddMembers(members.ToArray())
 
@@ -246,38 +131,30 @@ module Generator =
       .AddMembers(nsDeclaration)
       .WithLeadingTrivia(SyntaxFactory.Comment(header), SyntaxFactory.LineFeed)
 
-  /// Builds a complete C# syntax tree before rendering or writing any source.
+  /// Builds a complete C# syntax tree from validated portable definitions.
   let generateSyntax generatedNamespace (typ: Type) : CompilationUnitSyntax =
     let ns = namespaceName generatedNamespace
 
-    match typ.GetCustomAttribute<GenerateGodotNode>(false) with
-    | null -> invalidArg "typ" $"{typ.FullName}: GenerateGodotNode is required."
-    | attr -> generateType ns typ attr
+    match Analysis.analyzeTypes [ typ ] with
+    | [| node |] -> generateType ns node
+    | _ -> invalidArg "typ" $"{typ.FullName}: GenerateGodotNode is required."
 
-  /// Generates annotated types in deterministic order, rejecting colliding filenames.
-  let generateTypes generatedNamespace (types: seq<Type>) =
+  let generateDefinitions generatedNamespace (nodes: NodeDefinition array) =
     let ns = namespaceName generatedNamespace
 
-    let files =
-      types
-      |> Seq.choose (fun typ ->
-        match typ.GetCustomAttribute<GenerateGodotNode>(false) with
-        | null -> None
-        | attr ->
-          Some
-            { Name = attr.GetGodotName() + ".cs"
-              Content = generateType ns typ attr |> render }
-      )
-      |> Seq.sortBy _.Name
-      |> Seq.toArray
+    nodes
+    |> Array.map (fun node ->
+      { Name = node.Name + ".cs"
+        Content = generateType ns node |> render }
+    )
+    |> Array.sortBy _.Name
 
-    let names = Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase)
+  let generateTypes generatedNamespace (types: seq<Type>) =
+    namespaceName generatedNamespace
+    |> ignore
 
-    for file in files do
-      if not (names.Add file.Name) then
-        invalidArg "types" $"Duplicate generated filename: {file.Name}."
-
-    files
+    Analysis.analyzeTypes types
+    |> generateDefinitions generatedNamespace
 
   let generate generatedNamespace (assemblies: seq<Assembly>) =
     assemblies

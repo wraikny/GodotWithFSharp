@@ -51,66 +51,44 @@ module internal CSharpSyntax =
     parts.[1..]
     |> Array.fold (fun left right -> SyntaxFactory.QualifiedName(left, right) :> NameSyntax) first
 
-  /// Builds a CLR type as syntax, including nested generics and array ranks.
-  let rec typeName (typ: Type) : TypeSyntax =
-    if typ = typeof<Void> then
-      SyntaxFactory.PredefinedType(SyntaxFactory.Token SyntaxKind.VoidKeyword) :> TypeSyntax
-    elif
-      typ.IsByRef
-      || typ.IsPointer
-      || typ.ContainsGenericParameters
-    then
-      invalidArg "typ" $"Unsupported C# type: {typ}."
-    elif typ.IsArray then
+  /// Renders portable type definitions as Roslyn nodes.
+  let rec referenceName reference : TypeSyntax =
+    match reference with
+    | Void -> SyntaxFactory.PredefinedType(SyntaxFactory.Token SyntaxKind.VoidKeyword) :> TypeSyntax
+    | TypeReference.Array(element, rank) ->
       let dimensions =
-        Array.init (typ.GetArrayRank()) (fun _ -> SyntaxFactory.OmittedArraySizeExpression() :> ExpressionSyntax)
+        Array.init rank (fun _ -> SyntaxFactory.OmittedArraySizeExpression() :> ExpressionSyntax)
 
-      let rank =
+      let rankNode =
         SyntaxFactory.ArrayRankSpecifier(SyntaxFactory.SeparatedList<ExpressionSyntax>(dimensions))
 
-      match typeName (typ.GetElementType()) with
-      | :? ArrayTypeSyntax as element ->
-        element.WithRankSpecifiers(element.RankSpecifiers.Insert(0, rank)) :> TypeSyntax
-      | element -> SyntaxFactory.ArrayType(element).AddRankSpecifiers(rank) :> TypeSyntax
-    else
-      let args =
-        if typ.IsGenericType then
-          typ.GetGenericArguments()
+      match referenceName element with
+      | :? ArrayTypeSyntax as array -> array.WithRankSpecifiers(array.RankSpecifiers.Insert(0, rankNode)) :> TypeSyntax
+      | element -> SyntaxFactory.ArrayType(element).AddRankSpecifiers(rankNode) :> TypeSyntax
+    | Named parts ->
+      parts
+      |> Array.map (fun part ->
+        if part.Arguments.Length = 0 then
+          identifierName part.Name :> SimpleNameSyntax
         else
-          [||]
+          SyntaxFactory
+            .GenericName(identifier part.Name)
+            .WithTypeArgumentList(
+              SyntaxFactory.TypeArgumentList(
+                SyntaxFactory.SeparatedList<TypeSyntax>(
+                  part.Arguments
+                  |> Array.map referenceName
+                )
+              )
+            )
+          :> SimpleNameSyntax
+      )
+      |> globalName
+      :> TypeSyntax
 
-      let definition =
-        if typ.IsGenericType then
-          typ.GetGenericTypeDefinition()
-        else
-          typ
-
-      let mutable index = 0
-
-      let parts =
-        definition.FullName.Split('+')
-        |> Array.collect (fun part -> part.Split('.'))
-        |> Array.map (fun part ->
-          let segments = part.Split('`')
-
-          if segments.Length = 1 then
-            identifierName segments.[0] :> SimpleNameSyntax
-          else
-            let count = int segments.[1]
-
-            let values =
-              args.[index .. index + count - 1]
-              |> Array.map typeName
-
-            index <- index + count
-
-            SyntaxFactory
-              .GenericName(identifier segments.[0])
-              .WithTypeArgumentList(SyntaxFactory.TypeArgumentList(SyntaxFactory.SeparatedList<TypeSyntax>(values)))
-            :> SimpleNameSyntax
-        )
-
-      globalName parts :> TypeSyntax
+  let typeName typ =
+    TypeReference.ofType typ
+    |> referenceName
 
   let modifiers kinds =
     kinds

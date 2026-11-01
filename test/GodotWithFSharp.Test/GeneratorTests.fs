@@ -158,7 +158,7 @@ let ``rejects invalid namespaces and duplicate output names`` () =
   )
   |> ignore
 
-  Assert.Throws<ArgumentException>(fun () ->
+  Assert.Throws<GenerationException>(fun () ->
     Generator.generateTypes "Example" [ typeof<ExampleImpl>; typeof<ExampleImpl> ]
     |> ignore
   )
@@ -186,7 +186,7 @@ let ``rejects invalid implementation contracts before writing files`` () =
       )
 
     let error =
-      Assert.Throws<ArgumentException>(fun () ->
+      Assert.Throws<GenerationException>(fun () ->
         Generator.generateTypes "Example" [ typ ]
         |> ignore
       )
@@ -302,4 +302,29 @@ let ``generated CSharp compiles against the real runtime contracts`` () =
       Assert.Fail("Generated C# compilation timed out.")
 
     Assert.That(proc.ExitCode, Is.Zero, stdout.Result + stderr.Result)
+  )
+
+[<Test>]
+let ``reports all node collisions before rendering a batch`` () =
+  let error =
+    Assert.Throws<GenerationException>(fun () ->
+      Generator.generateTypes
+        "Example"
+        [ typeof<InvalidFixtures.ClassCollision>
+          typeof<InvalidFixtures.PropertyCollision>
+          typeof<InvalidFixtures.UnsupportedExport> ]
+      |> ignore
+    )
+
+  Assert.That(
+    error.Diagnostics
+    |> Array.filter (fun d -> d.Code = "GFS015")
+    |> Array.length,
+    Is.EqualTo(2)
+  )
+
+  Assert.That(
+    error.Diagnostics
+    |> Array.exists (fun d -> d.Code = "GFS011"),
+    Is.True
   )

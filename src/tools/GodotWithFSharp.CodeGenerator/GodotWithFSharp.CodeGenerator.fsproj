@@ -6,7 +6,9 @@
     <Description>Generate Godot C# nodes backed by F# implementations.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Definitions.fs" />
     <Compile Include="CSharpSyntax.fs" />
+    <Compile Include="Analysis.fs" />
     <Compile Include="Generator.fs" />
     <Compile Include="Program.fs" />
     <ProjectReference Include="../../libs/GodotWithFSharp/GodotWithFSharp.fsproj" />
