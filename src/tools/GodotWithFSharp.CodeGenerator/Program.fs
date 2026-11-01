@@ -3,11 +3,11 @@ module GodotWithFSharp.CodeGenerator.Program
 open System
 open System.IO
 open System.Reflection
-open System.Runtime.Loader
 
 let private usage =
   """Usage: godot-fsharp-gen --assembly <implementation.dll> [--assembly <other.dll> ...]
                         --namespace <Generated.Namespace> --output <directory>
+Use --reference <dependency.dll> for dependencies outside the build output.
 Paths are relative to the caller's working directory. Build implementation assemblies first.
 Use a dedicated output directory; stale generated files there are removed."""
 
@@ -20,8 +20,13 @@ let run (args: string[]) =
     0
   else
     try
+      let references = ResizeArray<string>()
+
       let rec parse assemblies ns output =
         function
+        | "--reference" :: value :: rest ->
+          references.Add(Path.GetFullPath value)
+          parse assemblies ns output rest
         | "--assembly" :: value :: rest -> parse (Path.GetFullPath(value) :: assemblies) ns output rest
         | "--namespace" :: value :: rest when Option.isNone ns -> parse assemblies (Some value) output rest
         | "--output" :: value :: rest when Option.isNone output ->
@@ -40,48 +45,11 @@ let run (args: string[]) =
         if not (File.Exists path) then
           raise (FileNotFoundException("Implementation assembly not found. Build it first.", path))
 
-      let resolvers =
-        paths
-        |> List.map AssemblyDependencyResolver
-
-      let handler =
-        Func<AssemblyLoadContext, AssemblyName, Assembly>(fun context name ->
-          let resolved =
-            resolvers
-            |> List.tryPick (fun resolver ->
-              match resolver.ResolveAssemblyToPath(name) with
-              | null -> None
-              | path -> Some path
-            )
-
-          let path =
-            resolved
-            |> Option.orElseWith (fun () ->
-              paths
-              |> List.tryPick (fun path ->
-                let candidate = Path.Combine(Path.GetDirectoryName path, name.Name + ".dll")
-                if File.Exists candidate then Some candidate else None
-              )
-            )
-
-          match path with
-          | Some path -> context.LoadFromAssemblyPath(path)
-          | None -> null
-        )
-
-      AssemblyLoadContext.Default.add_Resolving (handler)
-
-      try
-        let assemblies =
-          paths
-          |> List.map AssemblyLoadContext.Default.LoadFromAssemblyPath
-
-        let files = Generator.generate ns assemblies
-        Generator.writeFiles output files
-        printfn "Generated %d file(s) in %s" files.Length output
-        0
-      finally
-        AssemblyLoadContext.Default.remove_Resolving (handler)
+      let definitions = Metadata.read paths references
+      let files = Generator.generateDefinitions ns definitions
+      Generator.writeFiles output files
+      printfn "Generated %d file(s) in %s" files.Length output
+      0
     with error ->
       eprintfn "%s" error.Message
 

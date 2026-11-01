@@ -328,3 +328,15 @@ let ``reports all node collisions before rendering a batch`` () =
     |> Array.exists (fun d -> d.Code = "GFS011"),
     Is.True
   )
+
+[<Test>]
+let ``metadata definitions remain usable after inspection context is disposed`` () =
+  let definitions = Metadata.read [ typeof<ExampleImpl>.Assembly.Location ] []
+  let actual = Generator.generateDefinitions "Example.Generated" definitions
+  Assert.That(actual, Is.EqualTo(generate () :> obj))
+
+  Assert.Throws<FileNotFoundException>(fun () ->
+    Metadata.read [ typeof<ExampleImpl>.Assembly.Location ] [ "missing-reference.dll" ]
+    |> ignore
+  )
+  |> ignore
