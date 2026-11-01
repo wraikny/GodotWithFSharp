@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>godot-fsharp-gen</ToolCommandName>
+    <Description>Generate Godot C# nodes backed by F# implementations.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="CSharpSyntax.fs" />
+    <Compile Include="Generator.fs" />
+    <Compile Include="Program.fs" />
+    <ProjectReference Include="../../libs/GodotWithFSharp/GodotWithFSharp.fsproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+  </ItemGroup>
+</Project>

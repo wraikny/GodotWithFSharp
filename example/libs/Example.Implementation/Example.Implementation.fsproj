@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="BouncerImpl.fs" />
+    <Compile Include="MainImpl.fs" />
+    <ProjectReference Include="../../../src/libs/GodotWithFSharp/GodotWithFSharp.fsproj" />
+  </ItemGroup>
+</Project>
