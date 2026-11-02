@@ -30,6 +30,10 @@ let solution = IO.Path.Combine(root, "GodotWithFSharp.sln")
 let generator =
   IO.Path.Combine(root, "src/tools/GodotWithFSharp.CodeGenerator/GodotWithFSharp.CodeGenerator.fsproj")
 
+// Generated Godot scripts are formatted by Roslyn and tracked by the output manifest.
+let buildTaskProject =
+  IO.Path.Combine(root, "src/tools/GodotWithFSharp.Build/GodotWithFSharp.Build.csproj")
+
 let configuration () =
   match
     args
@@ -109,6 +113,7 @@ Target.create
   )
 
 Target.create "Format.FSharp" (fun _ -> runDotnet "fantomas" (sources ()))
+Target.create "Format.CSharp" (fun _ -> runDotnet "format" [ "whitespace"; buildTaskProject; "--no-restore" ])
 
 Target.create
   "Distribution.Verify"
@@ -121,8 +126,15 @@ Target.create
 
 "Build" ==> "Distribution.Verify"
 Target.create "Format.Check.FSharp" (fun _ -> runDotnet "fantomas" ("--check" :: sources ()))
+
+Target.create
+  "Format.Check.CSharp"
+  (fun _ -> runDotnet "format" [ "whitespace"; buildTaskProject; "--no-restore"; "--verify-no-changes" ])
+
 Target.create "Format" ignore
 Target.create "Format.Check" ignore
 "Format.FSharp" ==> "Format"
+"Format.CSharp" ==> "Format"
 "Format.Check.FSharp" ==> "Format.Check"
+"Format.Check.CSharp" ==> "Format.Check"
 Target.runOrDefaultWithArguments "Build"

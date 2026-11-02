@@ -19,7 +19,7 @@ dotnet fsi build.fsx --target Format.Check
 | Target | Purpose |
 | --- | --- |
 | `Build` / `Test` | Build or test the solution |
-| `Format` / `Format.Check` | Format or check F# sources |
+| `Format` / `Format.Check` | Format or check F# sources and handwritten C# whitespace/encoding |
 | `Example.Build` | Build the example through normal Godot/MSBuild generation |
 | `Example.Gen` | Build references and generate example scripts without compiling the Godot app |
 | `Integration.Build` | Build the engine integration project |
