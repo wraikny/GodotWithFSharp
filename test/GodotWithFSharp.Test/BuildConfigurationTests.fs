@@ -64,6 +64,12 @@ let ``submodules share explicit configuration without importing parent build pol
       """<Project><PropertyGroup><GodotVersion>4.5.1</GodotVersion><TargetFramework>net10.0</TargetFramework><ConsumerMarker>inherited</ConsumerMarker></PropertyGroup><ItemGroup><PackageReference Include="ParentOnlyPolicy" Version="1.0" /></ItemGroup></Project>"""
 
     File.WriteAllText(Path.Combine(root, "Directory.Build.props"), parent)
+
+    File.WriteAllText(
+      Path.Combine(root, "Directory.Packages.props"),
+      """<Project><PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup><ItemGroup><PackageReference Include="ParentCentralPolicy" Version="1.0"/></ItemGroup></Project>"""
+    )
+
     use standalone = evaluate root project []
 
     Assert.That(
@@ -83,6 +89,7 @@ let ``submodules share explicit configuration without importing parent build pol
     )
 
     Assert.That(standalone.RootElement.ToString(), Does.Not.Contain("ParentOnlyPolicy"))
+    Assert.That(standalone.RootElement.ToString(), Does.Not.Contain("ParentCentralPolicy"))
     let configuration = Path.Combine(root, "GodotWithFSharp.props")
 
     File.WriteAllText(
@@ -109,6 +116,7 @@ let ``submodules share explicit configuration without importing parent build pol
     )
 
     Assert.That(shared.RootElement.ToString(), Does.Not.Contain("ParentOnlyPolicy"))
+    Assert.That(shared.RootElement.ToString(), Does.Not.Contain("ParentCentralPolicy"))
     use overridden = evaluate root project [ "-p:GodotVersion=4.6.2" ]
 
     Assert.That(

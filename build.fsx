@@ -71,6 +71,7 @@ let sources () =
   ++ (IO.Path.Combine(root, "test/**/*.fs"))
   ++ (IO.Path.Combine(root, "example/**/*.fs"))
   ++ (IO.Path.Combine(root, "build.fsx"))
+  ++ (IO.Path.Combine(root, "build/**/*.fsx"))
   -- (IO.Path.Combine(root, "**/obj/**/*.fs"))
   -- (IO.Path.Combine(root, "**/bin/**/*.fs"))
   |> Seq.toList
@@ -108,6 +109,17 @@ Target.create
   )
 
 Target.create "Format.FSharp" (fun _ -> runDotnet "fantomas" (sources ()))
+
+Target.create
+  "Distribution.Verify"
+  (fun _ ->
+    runDotnet
+      "fsi"
+      [ IO.Path.Combine(root, "build/verify-distribution.fsx")
+        string (configuration ()) ]
+  )
+
+"Build" ==> "Distribution.Verify"
 Target.create "Format.Check.FSharp" (fun _ -> runDotnet "fantomas" ("--check" :: sources ()))
 Target.create "Format" ignore
 Target.create "Format.Check" ignore

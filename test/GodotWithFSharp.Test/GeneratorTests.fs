@@ -198,6 +198,7 @@ let ``writes incrementally and only removes owned stale files`` () =
   withDirectory (fun dir ->
     let files = generate ()
     Generator.writeFiles dir files
+    Assert.That(File.ReadAllText(Path.Combine(dir, Output.manifestName)), Does.Not.Contain("\r"))
     let retained = Path.Combine(dir, files.[0].Name)
     let oldTime = DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc)
     File.SetLastWriteTimeUtc(retained, oldTime)

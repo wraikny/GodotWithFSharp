@@ -56,6 +56,10 @@ module Output =
 
   let private jsonOptions = JsonSerializerOptions(WriteIndented = true)
 
+  let private serialize value =
+    JsonSerializer.Serialize(value, jsonOptions).Replace("\r\n", "\n")
+    + "\n"
+
   let private hash (content: string) =
     Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes content))
 
@@ -242,9 +246,7 @@ module Output =
               Hash = hash file.Content }
           ) }
 
-    let content =
-      JsonSerializer.Serialize(manifest, jsonOptions)
-      + "\n"
+    let content = serialize manifest
 
     { Write = writes |> Array.map _.Name
       Delete = deletes
@@ -356,7 +358,7 @@ module Output =
 
     if snapshots.Length > 0 then
       let journalPath = Path.Combine(directory, journalName)
-      atomicWrite journalPath (JsonSerializer.Serialize({ Version = 1; Files = snapshots }, jsonOptions))
+      atomicWrite journalPath (serialize { Version = 1; Files = snapshots })
 
       try
         for file in writes do

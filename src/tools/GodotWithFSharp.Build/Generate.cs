@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Text;
 using Microsoft.Build.Framework;
 
 namespace GodotWithFSharp.Build
@@ -31,7 +32,9 @@ namespace GodotWithFSharp.Build
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
             };
             start.ArgumentList.Add(ToolAssembly);
             foreach (var assembly in Assemblies)

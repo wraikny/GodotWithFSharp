@@ -12,6 +12,7 @@ namespace Integration.Generated
             Impl.DisposedCount = _godotExport_DisposedCount;
             Impl.EnterCount = _godotExport_EnterCount;
             Impl.ExitCount = _godotExport_ExitCount;
+            Impl.Offset = _godotExport_Offset;
             Impl.OrderValid = _godotExport_OrderValid;
             Impl.ReadyCount = _godotExport_ReadyCount;
         }
@@ -64,6 +65,23 @@ namespace Integration.Generated
             {
                 Impl.ExitCount = value;
                 _godotExport_ExitCount = value;
+            }
+        }
+
+        private global::Godot.Vector2 _godotExport_Offset = global::Integration.Implementation.ExportDefaults.Offset;
+        [global::Godot.ExportAttribute((global::Godot.PropertyHint)0, "")]
+        private global::Godot.Vector2 Offset
+        {
+            get
+            {
+                _godotExport_Offset = Impl.Offset;
+                return _godotExport_Offset;
+            }
+
+            set
+            {
+                Impl.Offset = value;
+                _godotExport_Offset = value;
             }
         }
 

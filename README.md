@@ -9,11 +9,15 @@ OpenAI Codex（利用モデル: GPT-6.1 Sol / `gpt-6.1-sol`）によるコード
 
 | 項目 | 最低対応バージョン |
 | --- | --- |
-| .NET | .NET 8.0（ビルド・コード生成には .NET 8.0 SDK 以上が必要） |
+| .NET | .NET 8.0 ランタイム / .NET SDK 8.0.100 |
 | Godot | Godot 4.6.2 の .NET 版（C# 対応版） |
 
 対象フレームワークは `net8.0` です。CLI の実行には .NET 8.0 ランタイムが必要です。
 Godot は動作確認済みの 4.6.2 を最低対応バージョンとし、それ未満での互換性は未検証です。
+リポジトリのビルドには .NET 8 SDK を使用します。`global.json` は 8.0.100 を基準に、インストール済みの最新 8.0 SDK までロールフォワードします。
+FSharp.Core は SDK から独立して 8.0.100 に固定し、NuGet の直接・推移依存は各プロジェクトの lock ファイルで管理します。
+Godot アプリの lock ファイルは Debug / ExportDebug / ExportRelease ごとに分けます。依存更新時は該当する構成で restore して差分を確認してください。
+Windows / Linux の x64、最小 SDK / 最新の 8.0 SDK、Godot 4.6.2 .NET 版を CI の検証対象とします。他の OS・アーキテクチャ・Godot バージョンは未検証です。
 エンジン本体はコード生成・単体テストに不要で、サンプルや生成ノードの実行時に必要です。
 `GodotVersion` MSBuild プロパティで GodotSharp のバージョンを指定できます。
 利用先の Godot / GodotSharp / Godot.NET.Sdk のバージョンを揃えてください。
@@ -53,7 +57,7 @@ Roslyn は .NET 標準ライブラリ同梱ではなく、ジェネレータの 
 ```
 
 submodule は上位にある最寄りの `GodotWithFSharp.props` を読みます。任意の場所を使う場合は `GodotWithFSharpConfiguration` にファイルパスを指定できます。
-共有ファイルには Godot 関連の共有値だけを置いてください。上位の `Directory.Build.props` 全体は既定では取り込みません。
+共有ファイルには Godot 関連の共有値だけを置いてください。上位の `Directory.Build.props` 全体と `Directory.Packages.props` のパッケージ方針は既定では取り込みません。
 共有値がない場合の GodotVersion は `4.6.2` です。`-p:GodotVersion=...` による上書きも可能です。
 ライブラリ・ツール・テストの対象フレームワークは各プロジェクトで `net8.0` に設定します。
 
@@ -161,6 +165,17 @@ submodule では targets の Import を推奨します。MSBuild 以外の仕組
 必要な移行時だけ true にしてください。
 CLI は `PackAsTool` に対応しています。外部へのパッケージ公開は行いません。
 
+配布の主経路は submodule です。ランタイムライブラリの ProjectReference と targets の Import を使います。
+CLI パッケージは、ビルド処理を独自に組む場合の入口として使用できます。MSBuild 用 targets とタスクは CLI パッケージには含めません。
+
+```shell
+dotnet fsi build.fsx --target Distribution.Verify
+```
+
+このターゲットはビルド後、CLI を一時ディレクトリに pack し、専用のローカルフィードから一時的にインストールして実際の DLL から生成します。
+ツールの依存キャッシュも分離し、既存の同じバージョンのパッケージを誤って検証しないようにします。一時ファイルは終了時に削除します。
+外部フィードへの公開やグローバルツールの登録は行いません。
+
 ## ランタイムヘルパー
 
 実装オブジェクトはノードのコンストラクタで一度だけ生成します。コンストラクタはノード参照の保持と軽量な状態準備に限定し、
@@ -191,6 +206,7 @@ EnterTree / ExitTree / Ready は Godot の呼び出しどおりに転送しま�
 
 ```shell
 dotnet build GodotWithFSharp.sln
+dotnet restore GodotWithFSharp.sln --locked-mode
 dotnet test GodotWithFSharp.sln
 dotnet fsi build.fsx --target Build -- Release
 dotnet fsi build.fsx --target Test -- Release
@@ -212,3 +228,5 @@ dotnet test GodotWithFSharp.sln --filter TestCategory=Godot
 ヘッドレスのエディター import、Export 既定値とシーン値、サンプルの移動・リセット、
 ツリー再入場・RequestReady・最終破棄、実装取得ヘルパーまでを実行します。
 終了コードと成功マーカーの両方を確認し、エンジンエラーやタイムアウトも失敗として扱います。
+
+CI は同じテスト、Export 構成のビルド、CLI の pack・インストール、生成ファイルと lock ファイルに差分がないことを確認します。

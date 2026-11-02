@@ -4,9 +4,13 @@
     <OutputType>Exe</OutputType>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>godot-fsharp-gen</ToolCommandName>
+    <Version>0.1.0</Version>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Description>Generate Godot C# nodes backed by F# implementations.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../../README.md" Pack="true" PackagePath="/" />
     <Compile Include="Definitions.fs" />
     <Compile Include="CSharpSyntax.fs" />
     <Compile Include="ExportDefaults.fs" />

@@ -4,6 +4,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <TargetFramework>net8.0</TargetFramework>
     <GodotWithFSharpNamespace>Example.Generated</GodotWithFSharpNamespace>
+    <NuGetLockFilePath>packages.$(Configuration).lock.json</NuGetLockFilePath>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../libs/Example.Implementation/Example.Implementation.fsproj" GodotWithFSharpImplementation="true" />

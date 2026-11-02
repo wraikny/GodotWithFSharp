@@ -14,7 +14,11 @@ F# の実装から薄い C# ノードを生成し、Godot.NET.Sdk の通常の�
 - [x] submodule の共有設定とツール・テストの内部設定を分離する。
 - [x] 通常の Godot ビルドで F# ビルド後・C# コンパイル前に生成する。
 - [x] CLI の別プロセス実行、Godot ビルド・ヘッドレス検証を自動化する。
-- [ ] SDK と依存を固定し、Windows / Linux、submodule / ツール配布を CI で検証する。
+- [x] SDK と依存を固定し、Windows / Linux、submodule / ツール配布の CI 検証を構成する。
+
+.NET SDK 8.0.100 と Godot 4.6.2 .NET 版を使う Windows 上の検証では、全26テスト、
+Debug / ExportDebug / ExportRelease のビルド、CLI の pack・一時インストール・生成を確認した。
+GitHub Actions 上の Windows / Linux、最新の .NET 8 SDK の結果は、この変更のコミット・push 後に確認する。
 
 ## Export
 

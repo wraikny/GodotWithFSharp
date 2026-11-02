@@ -12,10 +12,11 @@
     <_GodotWithFSharpBuildProject>$(MSBuildThisFileDirectory)../src/tools/GodotWithFSharp.Build/GodotWithFSharp.Build.csproj</_GodotWithFSharpBuildProject>
     <_GodotWithFSharpToolConfiguration>$(Configuration)</_GodotWithFSharpToolConfiguration>
     <_GodotWithFSharpBuildOutput>$(MSBuildThisFileDirectory)../src/tools/GodotWithFSharp.Build/bin/$(_GodotWithFSharpToolConfiguration)/net8.0/</_GodotWithFSharpBuildOutput>
+    <_GodotWithFSharpHelperProperties>TargetFramework;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;OutputPath;BaseOutputPath;BaseIntermediateOutputPath;IntermediateOutputPath;ArtifactsPath;UseArtifactsOutput</_GodotWithFSharpHelperProperties>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="$(_GodotWithFSharpToolProject)" ReferenceOutputAssembly="false" PrivateAssets="all" />
-    <ProjectReference Include="$(_GodotWithFSharpBuildProject)" ReferenceOutputAssembly="false" PrivateAssets="all" AdditionalProperties="OutputPath=$(_GodotWithFSharpBuildOutput);AppendTargetFrameworkToOutputPath=false" />
+    <ProjectReference Include="$(_GodotWithFSharpToolProject)" ReferenceOutputAssembly="false" PrivateAssets="all" GlobalPropertiesToRemove="$(_GodotWithFSharpHelperProperties)" />
+    <ProjectReference Include="$(_GodotWithFSharpBuildProject)" ReferenceOutputAssembly="false" PrivateAssets="all" GlobalPropertiesToRemove="$(_GodotWithFSharpHelperProperties)" />
   </ItemGroup>
   <UsingTask TaskName="GodotWithFSharp.Build.Generate" AssemblyFile="$(_GodotWithFSharpBuildOutput)GodotWithFSharp.Build.dll" />
   <Target Name="GenerateGodotWithFSharp" BeforeTargets="CoreCompile" DependsOnTargets="ResolveProjectReferences;ValidateGodotWithFSharpVersion" Condition="'$(DesignTimeBuild)' != 'true'">
@@ -27,7 +28,7 @@
     <MSBuild Projects="@(_GodotWithFSharpImplementation)" Targets="GetTargetPath" BuildInParallel="false" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=$(TargetFramework)">
       <Output TaskParameter="TargetOutputs" ItemName="_GodotWithFSharpAssembly" />
     </MSBuild>
-    <MSBuild Projects="$(_GodotWithFSharpToolProject)" Targets="GetTargetPath" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=net8.0">
+    <MSBuild Projects="$(_GodotWithFSharpToolProject)" Targets="GetTargetPath" RemoveProperties="$(_GodotWithFSharpHelperProperties)" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=net8.0">
       <Output TaskParameter="TargetOutputs" ItemName="_GodotWithFSharpToolAssembly" />
     </MSBuild>
     <GodotWithFSharp.Build.Generate ToolAssembly="@(_GodotWithFSharpToolAssembly)" Assemblies="@(_GodotWithFSharpAssembly)"

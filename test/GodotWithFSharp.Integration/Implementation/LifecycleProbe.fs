@@ -4,9 +4,12 @@ open System
 open Godot
 open GodotWithFSharp
 
-type private Counters =
+type private Counters() =
   static member val Disposed = 0 with get, set
   static member val OrderValid = true with get, set
+
+type ExportDefaults =
+  static member Offset = Vector2(12.0f, 34.0f)
 
 [<GenerateGodotNode("LifecycleProbe", typeof<Node>, Tool = true)>]
 type LifecycleProbeImpl(_node: Node) =
@@ -15,6 +18,9 @@ type LifecycleProbeImpl(_node: Node) =
   let mutable readies = 0
   let mutable disposed = false
   interface Impl<Node>
+
+  [<Export; GodotExportDefaultProvider(typeof<ExportDefaults>, "Offset")>]
+  member val Offset = Vector2.Zero with get, set
 
   [<Export; GodotExportDefault(0)>]
   member _.EnterCount
