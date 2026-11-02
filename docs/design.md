@@ -1,49 +1,47 @@
-# 設計と実装状況
+# Design
 
-F# の実装から薄い C# ノードを生成し、Godot.NET.Sdk の通常のコンパイル・コード生成に渡す。
-独自の初期化ライフサイクルは追加しない。元プロジェクトは参照専用とする。
+[Documentation home](../README.md) | [Get Started](get-started.md) | [Build and generation](build-and-generation.md)
 
-## 承認された方針
+## Purpose and boundaries
 
-- [x] 解析・検証・Roslyn AST 生成を分離し、バッチ全体を出力前に検証する。
-- [x] 入力 DLL を MetadataLoadContext で解析し、入力コードや属性コンストラクタを実行しない。
-- [x] Export の既定値を明示し、エディターと実行時を一致させる。
-- [x] 生成・Ready・ツリーへの出入り・最終破棄を区別する。
-- [x] ノード型と実装型の対応を検証し、Try 取得 API を用意する。
-- [x] manifest、内容のハッシュ、更新計画、中断からの復旧で出力を管理する。
-- [x] submodule の共有設定とツール・テストの内部設定を分離する。
-- [x] 通常の Godot ビルドで F# ビルド後・C# コンパイル前に生成する。
-- [x] CLI の別プロセス実行、Godot ビルド・ヘッドレス検証を自動化する。
-- [x] SDK と依存を固定し、Windows / Linux、submodule / ツール配布の CI 検証を構成する。
+GodotWithFSharp extracts Godot/F# interop and C# node generation into components that can be reused independently of a game project. Extraction work is scoped to this repository; the original game project is a read-only reference.
 
-.NET SDK 8.0.100 と Godot 4.6.2 .NET 版を使う Windows 上の検証では、全26テスト、
-Debug / ExportDebug / ExportRelease のビルド、CLI の pack・一時インストール・生成を確認した。
-GitHub Actions 上の Windows / Linux、最新の .NET 8 SDK の結果は、この変更のコミット・push 後に確認する。
+F# classes hold behavior and state. Thin generated C# nodes bridge them to Godot's script, export, and callback infrastructure. Physical scripts are compiled through Godot.NET.Sdk and its own source generators.
 
-## Export
+## Generation pipeline
 
-既定値には専用の `GodotExportDefault` を使用する。
-標準の `System.ComponentModel.DefaultValue` は初期値適用の契約として使わない。
-複合型は `GodotExportDefaultProvider` で公開 static プロパティまたは引数なし static メソッドを指定する。
-提供メンバーは型が一致し、副作用がなく、可変な値を共有しないものとする。
+```text
+Implementation DLLs
+    -> MetadataLoadContext inspection
+    -> portable node definitions and batch validation
+    -> Roslyn syntax trees
+    -> C# source files and an ownership manifest
+```
 
-順序は実装コンストラクタ、宣言した既定値の適用、シーンに保存された値の適用、EnterTree、Ready とする。
-コンストラクタ内では属性値やシーン値の反映を前提にしない。動作中の通常の代入は既定値で補正しない。
-生成プロパティは実装側の更新を getter で取得し、setter は実装側に転送する。
+`Definitions.fs` holds the portable model. `Metadata.fs` isolates input assembly inspection from the tool's execution context. `Analysis.fs` validates a complete batch before output, and `CSharpSyntax.fs` and `Generator.fs` construct C# syntax with Roslyn's `SyntaxFactory`.
 
-## ライフサイクルと所有権
+`Generator.generateSyntax` exposes a syntax tree before string conversion. Formatting uses `NormalizeWhitespace` and `ToFullString`. Roslyn is a NuGet dependency of the generator; runtime consumers need the runtime library and their F# implementation.
 
-実装オブジェクトはノードのコンストラクタで一度だけ生成する。
-シーン依存の初期化は `GenerateGodotOverride("_Ready")` で記述する。
-EnterTree / ExitTree / Ready は Godot の呼び出しどおり転送し、再入場で実装を作り直さない。
-`RequestReady()` の挙動も変更しない。`GenerateGodotInitialize` は追加しない。
+The CLI and generation API use custom-attribute metadata instead of executing attribute constructors. Default providers are inspected but execute only when Godot evaluates defaults or creates a node.
 
-`Tool = true` は生成ノードを Godot の Tool スクリプトにする。
-`IDisposable` 実装の最終破棄はノードが所有し、`DisposeImplementation = false` で無効化できる。
-ツリー退出では破棄しない。利用者の破棄通知 callback と後始末は合成し、後始末は finally で実行する。
+## Runtime contracts
 
-## コミットと検証
+An implementation is constructed once per node. Declared export defaults are then applied to it, followed by Godot's serialized scene values. Scene-dependent initialization uses a forwarded `_Ready` method. Ordinary later assignments are not rewritten into defaults.
 
-全体方針の承認後、段階ごとに実装・検証・コミットする。
-各段階に回帰テストを含め、最後のテスト拡充段階まで検証を先送りしない。
-コミットには実際の Codex モデル名を含む Co-authored-by を付ける。
+Tree callbacks preserve Godot's lifecycle, including reentry and `RequestReady()`. There is no additional initialization callback. An owned `IDisposable` implementation is disposed once at final node deletion, rather than tree exit; the generated callback composes user notifications with cleanup in `finally`. Ownership and tool execution are configurable through node attributes.
+
+Runtime helpers check node validity and implementation contracts. Scene-instantiation failures release the newly created root before raising an exception. See the [runtime API](runtime.md) for usage and constraints.
+
+## Ownership and updates
+
+`Output.fs` manages generation plans, owner/input identity, content hashes, temporary writes, and interrupted-update recovery. Handwritten collisions and manually edited generated sources are rejected. Empty batches, input-set changes, and legacy adoption require explicit options. Godot owns `.uid` files.
+
+Each output directory belongs to one owner and one input batch. All generated files are rendered and validated before writes begin. See [generated file ownership](build-and-generation.md#generated-file-ownership) for operational details.
+
+## Build and configuration boundaries
+
+The Godot C# project references the F# implementation, which references the runtime library. MSBuild builds inputs before generation and adds generated sources before C# compilation. The CLI runs separately from MSBuild and keeps generation available to other build systems.
+
+Consumers share Godot settings through an explicit props file. Internal framework and dependency policy is kept separate from parent project policy. SDK/NuGet version checks, pinned dependencies, project lock files, engine integration tests, and package-install checks make the supported baseline verifiable.
+
+For review, focus on the build connection, export initialization order, lifecycle/disposal, complete-batch validation, and output ownership/recovery. [Development and testing](development.md) maps these contracts to tests and CI.

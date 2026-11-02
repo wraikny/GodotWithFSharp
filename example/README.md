@@ -1,54 +1,51 @@
-# 動作サンプル
+# Example
 
-F# が四角形を移動させ、画面端で反射させるサンプルです。
-画面上部に速度と座標を表示し、Reset position ボタンで初期位置に戻します。
-画像などの外部アセットは不要です。
+[Documentation home](../README.md) | [Get Started](../docs/get-started.md) | [Runtime API](../docs/runtime.md)
+
+This example moves a rectangle with F#, bounces it at the window edges, and displays its speed and position. The **Reset position** button returns it to its initial position. It uses no external image assets.
 
 ```text
 example/
-  apps/Godot/                      Godot の実行プロジェクトとシーン
-    scripts/generated/             CLI が生成する C# ノード
-  libs/Example.Implementation/      ノードの動作を実装する F# ライブラリ
+  apps/Godot/                      Godot application and scenes
+    scripts/generated/             Generated C# node scripts
+  libs/Example.Implementation/      F# node behavior
 ```
 
-.NET 8 SDK 以上と Godot 4.6.2 の **.NET 版**を使用してください。
-リポジトリのルートで次を実行します。
+## Build and run
+
+Use a .NET 8 SDK, version 8.0.100 or later, and Godot 4.6.2 **.NET edition**. Run from the repository root:
 
 ```shell
-dotnet fsi build.fsx --target Example.Build
-# または
 dotnet build example/apps/Godot/Example.csproj
 ```
 
-F# 実装のビルド → C# ノード生成 → Godot アプリのビルドを順番に実行します。
-その後、Godot で `example/apps/Godot/project.godot` を開き、F5 で実行してください。
-CLI からは次のように起動できます（`godot` は .NET 版の実行ファイルに読み替えてください）。
+The equivalent FAKE target is `dotnet fsi build.fsx --target Example.Build`. The build compiles the F# implementation, generates C# scripts, and compiles the Godot application.
+
+Open `example/apps/Godot/project.godot` in Godot and press F5. If the engine executable is available as `godot`, you can also run:
 
 ```shell
 godot --path example/apps/Godot --editor
 godot --path example/apps/Godot
 ```
 
-`BouncerImpl.fs` の `[<Export>]` が Godot のインスペクターに転送されます。
-`GodotExportDefault(180.0f)` で既定値を明示し、エディターと実行時の初期値を一致させています。
-`Main.tscn` の Bouncer ノードでは Speed を既定の 180 から 240 に変更しています。
-`[<GenerateGodotOverride>]` により `_Ready` と `_Process` を F# に転送します。
-`BouncerImpl.Update` では `[<GenerateGodotOverride("_Process")>]` で実装と override 先の名前を分けています。
-`MainImpl.fs` は `GetNodeImpl` / `GetRuntimeNode` で子ノードとその実装を取得します。
-F# の公開プロパティや属性を変更したら、通常のビルド（Godot エディターのビルドを含む）で再生成されます。
-生成 C# は直接編集せず、F# 側を編集します。
+Use `dotnet fsi build.fsx --target Example.Gen` to build references and generate scripts without compiling the Godot application.
 
-生成までを実行する場合は `dotnet fsi build.fsx --target Example.Gen` を使えます。
-利用先でも `build/GodotWithFSharp.targets` を Import し、実装の ProjectReference に
-`GodotWithFSharpImplementation="true"` を指定して利用できます。
+## What to inspect
 
-ヘッドレスでの動作確認もできます。
+- [BouncerImpl.fs](libs/Example.Implementation/BouncerImpl.fs) declares an exported Speed default of `180.0f` and maps `Update` to Godot's `_Process` callback.
+- [Main.tscn](apps/Godot/scenes/Main.tscn) saves a Speed override of `240` on the Bouncer node.
+- [MainImpl.fs](libs/Example.Implementation/MainImpl.fs) obtains child implementations, connects the reset button, and displays status.
+- [Example.csproj](apps/Godot/Example.csproj) marks the F# implementation reference and imports the generation targets.
+
+Change the F# implementations and use a normal build, including the Godot editor's build, to regenerate scripts. Edit F# rather than the generated C# files. Follow [Get Started](../docs/get-started.md) to use this structure in another project.
+
+## Headless smoke test
+
+Replace `godot` with your .NET engine executable:
 
 ```shell
 godot --headless --path example/apps/Godot --editor --import
 godot --headless --path example/apps/Godot --quit-after 120 -- --smoke-test
 ```
 
-正常なら 30 フレーム後に `EXAMPLE_SMOKE_TEST_OK` を表示し、終了コード 0 で終了します。
-シーンの Export 値、移動処理、実装取得、ボタンのシグナルによるリセットを確認します。
-`--quit-after` は処理が呼び出されない場合の上限です。確認時は終了コードだけでなく成功メッセージも確認してください。
+Success prints `EXAMPLE_SMOKE_TEST_OK` after 30 frames and exits with code 0. The test checks the scene export value, movement, implementation lookup, and button-triggered reset. Check both the marker and the exit code; `--quit-after` bounds the run if the expected callback is never reached.
