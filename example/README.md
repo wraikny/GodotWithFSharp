@@ -16,6 +16,8 @@ example/
 
 ```shell
 dotnet fsi build.fsx --target Example.Build
+# または
+dotnet build example/apps/Godot/Example.csproj
 ```
 
 F# 実装のビルド → C# ノード生成 → Godot アプリのビルドを順番に実行します。
@@ -33,12 +35,12 @@ godot --path example/apps/Godot
 `[<GenerateGodotOverride>]` により `_Ready` と `_Process` を F# に転送します。
 `BouncerImpl.Update` では `[<GenerateGodotOverride("_Process")>]` で実装と override 先の名前を分けています。
 `MainImpl.fs` は `GetNodeImpl` / `GetRuntimeNode` で子ノードとその実装を取得します。
-F# の公開プロパティや属性を変更したら `Example.Build` を再実行してください。
+F# の公開プロパティや属性を変更したら、通常のビルド（Godot エディターのビルドを含む）で再生成されます。
 生成 C# は直接編集せず、F# 側を編集します。
 
 生成までを実行する場合は `dotnet fsi build.fsx --target Example.Gen` を使えます。
-利用先でも「実装ビルド → CLI → アプリビルド」の順序を設けることで、
-このリポジトリを submodule として参照する構成に置き換えられます。
+利用先でも `build/GodotWithFSharp.targets` を Import し、実装の ProjectReference に
+`GodotWithFSharpImplementation="true"` を指定して利用できます。
 
 ヘッドレスでの動作確認もできます。
 

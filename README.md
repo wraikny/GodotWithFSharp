@@ -86,8 +86,29 @@ type PlayerImpl(node: Node2D) =
     node.Position <- node.Position + Vector2(float32 (this.Speed * delta), 0.0f)
 ```
 
-実装アセンブリをビルドした後、**利用先のルートをカレントディレクトリとして**呼び出します。
-生成先の C# プロジェクトからも実装プロジェクトを参照してください。
+Godot の C# プロジェクトから実装を参照し、生成用 targets を Import します。パスは配置に合わせて調整してください。
+
+```xml
+<Project Sdk="Godot.NET.Sdk/4.6.2">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GodotWithFSharpNamespace>Example.Generated</GodotWithFSharpNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Example.Implementation/Example.Implementation.fsproj"
+                      GodotWithFSharpImplementation="true" />
+  </ItemGroup>
+  <Import Project="../../libs/GodotWithFSharp/build/GodotWithFSharp.targets" />
+</Project>
+```
+
+`dotnet build` と Godot エディターのビルドから、実装 DLL のビルド、C# の生成、Godot SDK のコンパイルを順に実行します。
+実装側から生成先の C# プロジェクトを参照しないでください。生成先の既定値は Godot プロジェクト内の `scripts/generated` です。
+`GodotWithFSharpOutput` で変更でき、相対パスは C# プロジェクト基準です。
+生成ファイルは初回ビルド中にコンパイル対象へ追加します。DesignTimeBuild では生成しません。
+毎回所有権と内容を確認し、変更がない生成ファイルは再書き込みしません。
+
+CLI を単独で使う場合は、**利用先のルートをカレントディレクトリとして**実装ビルド後に呼び出します。
 
 ```shell
 dotnet build src/Example.Implementation/Example.Implementation.fsproj
@@ -134,12 +155,11 @@ FAKE のターゲットでも同じ CLI を呼び出せます。パスは呼び�
 dotnet fsi libs/GodotWithFSharp/build.fsx --target Gen -- --assembly src/Example.Implementation/bin/Debug/net8.0/Example.Implementation.dll --namespace Example.Generated --output apps/Godot/scripts/generated
 ```
 
-推奨は CLI を直接呼び出し、利用先の build.fsx に「実装ビルド → CLI 呼び出し」の依存関係を置く方法です。
-これなら利用先が FAKE 以外でも同じ入口を使用できます。
-CLI は `PackAsTool` に対応しているため、将来は `dotnet pack` したパッケージを
-ローカルツールとして登録し、`dotnet godot-fsharp-gen ...` で実行する運用にも移行できます。
-パッケージの公開・ツールのインストールはこのリポジトリでは行いません。
-MSBuild の自動実行は実装 DLL が必要になるため循環参照を避ける必要があり、明示的な生成ステップを推奨します。
+submodule では targets の Import を推奨します。MSBuild 以外の仕組みでは CLI を直接呼び出せます。
+`GodotWithFSharpOwner` の既定値は namespace です。CLI の明示的な移行操作に対応する
+`GodotWithFSharpAllowEmpty`、`GodotWithFSharpAllowInputChange`、`GodotWithFSharpAdoptExisting` は既定ではすべて false です。
+必要な移行時だけ true にしてください。
+CLI は `PackAsTool` に対応しています。外部へのパッケージ公開は行いません。
 
 ## ランタイムヘルパー
 

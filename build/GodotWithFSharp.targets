@@ -1,0 +1,44 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)GodotWithFSharp.props" Condition="'$(_GodotWithFSharpPropsImported)' != 'true'" />
+  <Import Project="$(MSBuildThisFileDirectory)GodotWithFSharp.Validation.targets" Condition="'$(_GodotWithFSharpValidationImported)' != 'true'" />
+  <PropertyGroup>
+    <GodotWithFSharpOutput Condition="'$(GodotWithFSharpOutput)' == ''">$(MSBuildProjectDirectory)/scripts/generated</GodotWithFSharpOutput>
+    <_GodotWithFSharpOutputDirectory>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::GetFullPath('$(GodotWithFSharpOutput)', '$(MSBuildProjectDirectory)'))))</_GodotWithFSharpOutputDirectory>
+    <GodotWithFSharpOwner Condition="'$(GodotWithFSharpOwner)' == ''">$(GodotWithFSharpNamespace)</GodotWithFSharpOwner>
+    <GodotWithFSharpAllowEmpty Condition="'$(GodotWithFSharpAllowEmpty)' == ''">false</GodotWithFSharpAllowEmpty>
+    <GodotWithFSharpAllowInputChange Condition="'$(GodotWithFSharpAllowInputChange)' == ''">false</GodotWithFSharpAllowInputChange>
+    <GodotWithFSharpAdoptExisting Condition="'$(GodotWithFSharpAdoptExisting)' == ''">false</GodotWithFSharpAdoptExisting>
+    <_GodotWithFSharpToolProject>$(MSBuildThisFileDirectory)../src/tools/GodotWithFSharp.CodeGenerator/GodotWithFSharp.CodeGenerator.fsproj</_GodotWithFSharpToolProject>
+    <_GodotWithFSharpBuildProject>$(MSBuildThisFileDirectory)../src/tools/GodotWithFSharp.Build/GodotWithFSharp.Build.csproj</_GodotWithFSharpBuildProject>
+    <_GodotWithFSharpToolConfiguration>$(Configuration)</_GodotWithFSharpToolConfiguration>
+    <_GodotWithFSharpBuildOutput>$(MSBuildThisFileDirectory)../src/tools/GodotWithFSharp.Build/bin/$(_GodotWithFSharpToolConfiguration)/net8.0/</_GodotWithFSharpBuildOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(_GodotWithFSharpToolProject)" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="$(_GodotWithFSharpBuildProject)" ReferenceOutputAssembly="false" PrivateAssets="all" AdditionalProperties="OutputPath=$(_GodotWithFSharpBuildOutput);AppendTargetFrameworkToOutputPath=false" />
+  </ItemGroup>
+  <UsingTask TaskName="GodotWithFSharp.Build.Generate" AssemblyFile="$(_GodotWithFSharpBuildOutput)GodotWithFSharp.Build.dll" />
+  <Target Name="GenerateGodotWithFSharp" BeforeTargets="CoreCompile" DependsOnTargets="ResolveProjectReferences;ValidateGodotWithFSharpVersion" Condition="'$(DesignTimeBuild)' != 'true'">
+    <ItemGroup>
+      <_GodotWithFSharpImplementation Include="@(ProjectReference)" Condition="'%(ProjectReference.GodotWithFSharpImplementation)' == 'true'" />
+    </ItemGroup>
+    <Error Code="GFS204" Condition="'@(_GodotWithFSharpImplementation)' == ''" Text="Mark at least one ProjectReference with GodotWithFSharpImplementation=true." />
+    <Error Code="GFS205" Condition="'$(GodotWithFSharpNamespace)' == ''" Text="Set GodotWithFSharpNamespace to the namespace for generated nodes." />
+    <MSBuild Projects="@(_GodotWithFSharpImplementation)" Targets="GetTargetPath" BuildInParallel="false" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="_GodotWithFSharpAssembly" />
+    </MSBuild>
+    <MSBuild Projects="$(_GodotWithFSharpToolProject)" Targets="GetTargetPath" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=net8.0">
+      <Output TaskParameter="TargetOutputs" ItemName="_GodotWithFSharpToolAssembly" />
+    </MSBuild>
+    <GodotWithFSharp.Build.Generate ToolAssembly="@(_GodotWithFSharpToolAssembly)" Assemblies="@(_GodotWithFSharpAssembly)"
+      Namespace="$(GodotWithFSharpNamespace)" OutputDirectory="$(_GodotWithFSharpOutputDirectory)"
+      Owner="$(GodotWithFSharpOwner)" DotNetHost="$(DotNetHostPath)" AllowEmpty="$(GodotWithFSharpAllowEmpty)"
+      AllowInputChange="$(GodotWithFSharpAllowInputChange)" AdoptExisting="$(GodotWithFSharpAdoptExisting)" />
+    <!-- Evaluation precedes generation, so refresh this batch in the same first build. -->
+    <ItemGroup>
+      <_GodotWithFSharpExistingCompile Include="@(Compile)" Condition="'%(Compile.RootDir)%(Compile.Directory)' == '$(_GodotWithFSharpOutputDirectory)'" />
+      <Compile Remove="@(_GodotWithFSharpExistingCompile)" />
+      <Compile Include="$(GodotWithFSharpOutput)/*.cs" />
+    </ItemGroup>
+  </Target>
+</Project>

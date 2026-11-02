@@ -3,8 +3,10 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <TargetFramework>net8.0</TargetFramework>
+    <GodotWithFSharpNamespace>Example.Generated</GodotWithFSharpNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../libs/Example.Implementation/Example.Implementation.fsproj" />
+    <ProjectReference Include="../../libs/Example.Implementation/Example.Implementation.fsproj" GodotWithFSharpImplementation="true" />
   </ItemGroup>
+  <Import Project="../../../build/GodotWithFSharp.targets" />
 </Project>

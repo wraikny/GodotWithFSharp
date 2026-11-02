@@ -19,6 +19,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GodotWithFSharp.Test", "tes
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GodotWithFSharp.Test.Fixtures", "test\GodotWithFSharp.Test\Fixtures\GodotWithFSharp.Test.Fixtures.fsproj", "{CA164BA1-F14E-45B0-9FEB-7D55A3D999E6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GodotWithFSharp.Build", "src\tools\GodotWithFSharp.Build\GodotWithFSharp.Build.csproj", "{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +79,18 @@ Global
 		{CA164BA1-F14E-45B0-9FEB-7D55A3D999E6}.Release|x64.Build.0 = Release|Any CPU
 		{CA164BA1-F14E-45B0-9FEB-7D55A3D999E6}.Release|x86.ActiveCfg = Release|Any CPU
 		{CA164BA1-F14E-45B0-9FEB-7D55A3D999E6}.Release|x86.Build.0 = Release|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Debug|x64.Build.0 = Debug|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Debug|x86.Build.0 = Debug|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Release|x64.ActiveCfg = Release|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Release|x64.Build.0 = Release|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Release|x86.ActiveCfg = Release|Any CPU
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,5 +102,6 @@ Global
 		{52943891-17F9-48F5-A29B-4103ADABD07A} = {DCB6FCB8-FF92-AC57-0842-1F72A354D6B1}
 		{D0503D62-BE26-4036-9BF5-CCC45E618BBF} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 		{CA164BA1-F14E-45B0-9FEB-7D55A3D999E6} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
+		{5138BF75-C4FD-43B2-8EA5-56BECF0A0B66} = {DCB6FCB8-FF92-AC57-0842-1F72A354D6B1}
 	EndGlobalSection
 EndGlobal

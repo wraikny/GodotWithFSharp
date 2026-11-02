@@ -87,30 +87,25 @@ Target.create
 Target.create
   "Example.Gen"
   (fun _ ->
-    let assembly =
-      IO.Path.Combine(
-        root,
-        $"example/libs/Example.Implementation/bin/{configuration ()}/net8.0/Example.Implementation.dll"
-      )
-
     runDotnet
-      "run"
-      [ "--project"
-        generator
-        "--"
-        "--assembly"
-        assembly
-        "--namespace"
-        "Example.Generated"
-        "--output"
-        IO.Path.Combine(root, "example/apps/Godot/scripts/generated") ]
+      "msbuild"
+      [ exampleApp
+        "-restore"
+        "-target:GenerateGodotWithFSharp"
+        $"-property:Configuration={configuration ()}" ]
   )
 
 Target.create "Example.Build" (fun _ -> runDotnet "build" [ exampleApp; "--configuration"; string (configuration ()) ])
 
-"Example.Implementation"
-==> "Example.Gen"
-==> "Example.Build"
+Target.create
+  "Integration.Build"
+  (fun _ ->
+    runDotnet
+      "build"
+      [ IO.Path.Combine(root, "test/GodotWithFSharp.Integration/Godot/Integration.csproj")
+        "--configuration"
+        string (configuration ()) ]
+  )
 
 Target.create "Format.FSharp" (fun _ -> runDotnet "fantomas" (sources ()))
 Target.create "Format.Check.FSharp" (fun _ -> runDotnet "fantomas" ("--check" :: sources ()))

@@ -4,8 +4,10 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsPackable>false</IsPackable>
     <TargetFramework>net8.0</TargetFramework>
+    <GodotWithFSharpNamespace>Integration.Generated</GodotWithFSharpNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Implementation/Integration.Implementation.fsproj" />
+    <ProjectReference Include="../Implementation/Integration.Implementation.fsproj" GodotWithFSharpImplementation="true" />
   </ItemGroup>
+  <Import Project="../../../build/GodotWithFSharp.targets" />
 </Project>
