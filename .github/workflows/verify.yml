@@ -16,8 +16,6 @@ jobs:
         os: [windows-latest, ubuntu-latest]
         sdk: [8.0.100, 8.0.x]
     runs-on: ${{ matrix.os }}
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     timeout-minutes: 25
     defaults:
       run:
@@ -25,6 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: ${{ matrix.sdk }}
       - name: Download Godot .NET 4.6.2
