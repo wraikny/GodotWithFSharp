@@ -101,23 +101,13 @@ module internal CSharpSyntax =
   let assignment (left: ExpressionSyntax) (right: ExpressionSyntax) =
     SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, left, right)
 
-  let getter (expression: ExpressionSyntax) =
-    SyntaxFactory
-      .AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-      .WithBody(SyntaxFactory.Block(SyntaxFactory.ReturnStatement(expression)))
-
-  let setter (target: ExpressionSyntax) =
-    SyntaxFactory
-      .AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
-      .WithBody(SyntaxFactory.Block(SyntaxFactory.ExpressionStatement(assignment target (identifierName "value"))))
-
-  let constant (value: obj) : ExpressionSyntax =
+  let constant (value: DefaultConstant) : ExpressionSyntax =
     let numeric token =
       SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, token) :> ExpressionSyntax
 
     match value with
-    | null -> SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression) :> ExpressionSyntax
-    | :? bool as value ->
+    | DefaultConstant.Null -> SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression) :> ExpressionSyntax
+    | DefaultConstant.Boolean value ->
       SyntaxFactory.LiteralExpression(
         if value then
           SyntaxKind.TrueLiteralExpression
@@ -125,13 +115,13 @@ module internal CSharpSyntax =
           SyntaxKind.FalseLiteralExpression
       )
       :> ExpressionSyntax
-    | :? string as value ->
+    | DefaultConstant.String value ->
       SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(value))
       :> ExpressionSyntax
-    | :? char as value ->
+    | DefaultConstant.Character value ->
       SyntaxFactory.LiteralExpression(SyntaxKind.CharacterLiteralExpression, SyntaxFactory.Literal(value))
       :> ExpressionSyntax
-    | :? float32 as value when
+    | DefaultConstant.Single value when
       Single.IsNaN value
       || Single.IsInfinity value
       ->
@@ -141,7 +131,7 @@ module internal CSharpSyntax =
          elif value > 0.0f then "PositiveInfinity"
          else "NegativeInfinity")
       :> ExpressionSyntax
-    | :? double as value when
+    | DefaultConstant.Double value when
       Double.IsNaN value
       || Double.IsInfinity value
       ->
@@ -151,31 +141,28 @@ module internal CSharpSyntax =
          elif value > 0.0 then "PositiveInfinity"
          else "NegativeInfinity")
       :> ExpressionSyntax
-    | :? float32 as value -> numeric (SyntaxFactory.Literal(value))
-    | :? double as value -> numeric (SyntaxFactory.Literal(value))
-    | :? uint64 as value -> numeric (SyntaxFactory.Literal(value))
-    | :? int64 as value -> numeric (SyntaxFactory.Literal(value))
-    | :? uint32 as value -> numeric (SyntaxFactory.Literal(value))
-    | :? int as value -> numeric (SyntaxFactory.Literal(value))
-    | :? byte as value -> numeric (SyntaxFactory.Literal(int value))
-    | :? sbyte as value -> numeric (SyntaxFactory.Literal(int value))
-    | :? int16 as value -> numeric (SyntaxFactory.Literal(int value))
-    | :? uint16 as value -> numeric (SyntaxFactory.Literal(int value))
-    | _ -> invalidArg "value" $"Unsupported default constant: {value}."
+    | DefaultConstant.Single value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.Double value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.UInt64 value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.Int64 value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.UInt32 value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.Int32 value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.Byte value -> numeric (SyntaxFactory.Literal(int value))
+    | DefaultConstant.SByte value -> numeric (SyntaxFactory.Literal(int value))
+    | DefaultConstant.Int16 value -> numeric (SyntaxFactory.Literal(int value))
+    | DefaultConstant.UInt16 value -> numeric (SyntaxFactory.Literal(int value))
 
   let defaultExpression (typ: TypeReference) value : ExpressionSyntax =
     match value with
     | Constant value -> SyntaxFactory.CastExpression(referenceName typ, constant value) :> ExpressionSyntax
-    | StaticProvider(typ, name, isMethod) ->
-      let memberNode = memberAccess (referenceName typ) name
-
-      if isMethod then
+    | StaticProvider(typ, memberKind) ->
+      match memberKind with
+      | DefaultProviderMember.Property name -> memberAccess (referenceName typ) name :> ExpressionSyntax
+      | DefaultProviderMember.Method name ->
         SyntaxFactory
-          .InvocationExpression(memberNode)
+          .InvocationExpression(memberAccess (referenceName typ) name)
           .WithArgumentList(SyntaxFactory.ArgumentList())
         :> ExpressionSyntax
-      else
-        memberNode :> ExpressionSyntax
 
   let render (syntax: CompilationUnitSyntax) =
     syntax.NormalizeWhitespace("    ", "\n").ToFullString()

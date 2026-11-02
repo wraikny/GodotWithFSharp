@@ -1,9 +1,7 @@
 namespace GodotWithFSharp.CodeGenerator
 
 open System
-open System.IO
 open System.Reflection
-open System.Text
 open Microsoft.CodeAnalysis
 open Microsoft.CodeAnalysis.CSharp
 open Microsoft.CodeAnalysis.CSharp.Syntax
@@ -213,7 +211,10 @@ module Generator =
       let cleanup =
         SyntaxFactory.IfStatement(
           condition,
-          SyntaxFactory.Block(SyntaxFactory.ExpressionStatement(assignment disposed (constant (box true))), disposeCall)
+          SyntaxFactory.Block(
+            SyntaxFactory.ExpressionStatement(assignment disposed (constant (DefaultConstant.Boolean true))),
+            disposeCall
+          )
         )
 
       let forwarded =

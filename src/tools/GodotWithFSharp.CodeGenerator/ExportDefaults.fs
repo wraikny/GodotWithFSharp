@@ -4,6 +4,24 @@ open System
 open System.Reflection
 
 module internal ExportDefaults =
+  let private readConstant (value: obj) =
+    match value with
+    | null -> Ok DefaultConstant.Null
+    | :? bool as value -> Ok(DefaultConstant.Boolean value)
+    | :? string as value -> Ok(DefaultConstant.String value)
+    | :? char as value -> Ok(DefaultConstant.Character value)
+    | :? byte as value -> Ok(DefaultConstant.Byte value)
+    | :? sbyte as value -> Ok(DefaultConstant.SByte value)
+    | :? int16 as value -> Ok(DefaultConstant.Int16 value)
+    | :? uint16 as value -> Ok(DefaultConstant.UInt16 value)
+    | :? int as value -> Ok(DefaultConstant.Int32 value)
+    | :? uint32 as value -> Ok(DefaultConstant.UInt32 value)
+    | :? int64 as value -> Ok(DefaultConstant.Int64 value)
+    | :? uint64 as value -> Ok(DefaultConstant.UInt64 value)
+    | :? float32 as value -> Ok(DefaultConstant.Single value)
+    | :? double as value -> Ok(DefaultConstant.Double value)
+    | _ -> Error $"Unsupported default constant: {value}."
+
   let private attribute name (prop: PropertyInfo) =
     prop.GetCustomAttributesData()
     |> Seq.tryFind (fun a -> a.AttributeType.FullName = name)
@@ -12,10 +30,6 @@ module internal ExportDefaults =
     match value.Value with
     | :? CustomAttributeTypedArgument as nested -> unwrap nested
     | raw -> raw
-
-  let private sameType (a: Type) (b: Type) =
-    a.FullName = b.FullName
-    && a.Assembly.GetName().Name = b.Assembly.GetName().Name
 
   let private provider (prop: PropertyInfo) (attr: CustomAttributeData) =
     let typ = attr.ConstructorArguments.[0].Value :?> Type
@@ -40,7 +54,7 @@ module internal ExportDefaults =
           && p.GetIndexParameters().Length = 0
           && not (isNull p.GetMethod)
           && p.GetMethod.IsPublic
-          && sameType p.PropertyType prop.PropertyType
+          && TypeIdentity.same p.PropertyType prop.PropertyType
         )
 
       let methods =
@@ -49,14 +63,20 @@ module internal ExportDefaults =
           m.Name = name
           && not m.IsGenericMethod
           && m.GetParameters().Length = 0
-          && sameType m.ReturnType prop.PropertyType
+          && TypeIdentity.same m.ReturnType prop.PropertyType
         )
 
       if properties.Length + methods.Length <> 1 then
         Error
           $"Default provider '{typ.FullName}.{name}' must be one public static property or parameterless method returning {prop.PropertyType}."
       else
-        Ok(StaticProvider(TypeReference.ofType typ, name, methods.Length = 1))
+        let memberKind =
+          if methods.Length = 1 then
+            DefaultProviderMember.Method name
+          else
+            DefaultProviderMember.Property name
+
+        Ok(StaticProvider(TypeReference.ofType typ, memberKind))
 
   let read (prop: PropertyInfo) =
     let constant = attribute "GodotWithFSharp.GodotExportDefault" prop
@@ -83,6 +103,6 @@ module internal ExportDefaults =
             || prop.PropertyType.FullName = raw.GetType().FullName)
 
       if validNull || validValue then
-        Ok(Constant raw)
+        readConstant raw |> Result.map Constant
       else
         Error $"GodotExportDefault must match the exported property type {prop.PropertyType}."

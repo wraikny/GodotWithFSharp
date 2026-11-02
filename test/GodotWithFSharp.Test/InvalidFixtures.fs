@@ -5,6 +5,59 @@ open Godot
 open GodotWithFSharp
 
 module InvalidFixtures =
+  [<GenerateGodotNode("CompatibilityNode", typeof<Node>)>]
+  type GenericExport<'value>(_node: Node) =
+    interface Impl<Node>
+
+    [<Export; GodotExportDefault(null)>]
+    member val Value = Unchecked.defaultof<'value> with get, set
+
+  [<GenerateGodotNode("LiteralDefaultsNode", typeof<Node>)>]
+  type LiteralDefaults(_node: Node) =
+    interface Impl<Node>
+
+    [<Export; GodotExportDefault(null)>]
+    member val Text: string = null with get, set
+
+    [<Export; GodotExportDefault(true)>]
+    member val Flag = false with get, set
+
+    [<Export; GodotExportDefault('x')>]
+    member val Letter = ' ' with get, set
+
+    [<Export; GodotExportDefault(255uy)>]
+    member val Byte = 0uy with get, set
+
+    [<Export; GodotExportDefault(-128y)>]
+    member val SByte = 0y with get, set
+
+    [<Export; GodotExportDefault(-32768s)>]
+    member val Int16 = 0s with get, set
+
+    [<Export; GodotExportDefault(65535us)>]
+    member val UInt16 = 0us with get, set
+
+    [<Export; GodotExportDefault(-2147483648)>]
+    member val Int32 = 0 with get, set
+
+    [<Export; GodotExportDefault(4294967295u)>]
+    member val UInt32 = 0u with get, set
+
+    [<Export; GodotExportDefault(-9223372036854775808L)>]
+    member val Int64 = 0L with get, set
+
+    [<Export; GodotExportDefault(18446744073709551615UL)>]
+    member val UInt64 = 0UL with get, set
+
+    [<Export; GodotExportDefault(1.25f)>]
+    member val Single = 0.0f with get, set
+
+    [<Export; GodotExportDefault(2.5)>]
+    member val Double = 0.0 with get, set
+
+    [<Export; GodotExportDefault(PropertyHint.Range)>]
+    member val Enum = PropertyHint.None with get, set
+
   [<GenerateGodotNode("MissingContractNode", typeof<Node>)>]
   type MissingContract(_node: Node) =
     class

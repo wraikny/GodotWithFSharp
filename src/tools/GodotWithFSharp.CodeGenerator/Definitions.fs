@@ -71,9 +71,33 @@ module TypeReference =
       )
       |> Named
 
+/// Attribute literals supported by C# generation; no boxed values escape metadata inspection.
+[<RequireQualifiedAccess>]
+type DefaultConstant =
+  | Null
+  | Boolean of bool
+  | String of string
+  | Character of char
+  | Byte of byte
+  | SByte of sbyte
+  | Int16 of int16
+  | UInt16 of uint16
+  | Int32 of int
+  | UInt32 of uint32
+  | Int64 of int64
+  | UInt64 of uint64
+  | Single of float32
+  | Double of double
+
+/// The static member to access when Godot constructs a node or evaluates defaults.
+[<RequireQualifiedAccess>]
+type DefaultProviderMember =
+  | Property of name: string
+  | Method of name: string
+
 type DefaultExpression =
-  | Constant of obj
-  | StaticProvider of declaringType: TypeReference * memberName: string * isMethod: bool
+  | Constant of DefaultConstant
+  | StaticProvider of declaringType: TypeReference * providerMember: DefaultProviderMember
 
 type ExportDefinition =
   { Name: string

@@ -6,6 +6,8 @@ open GodotWithFSharp
 type ExportDefaultValues =
   static member Offset = Vector2(12.0f, 34.0f)
 
+  static member CreateOffset() = Vector2(56.0f, 78.0f)
+
 [<GenerateGodotNode("ExampleNode", typeof<Node>)>]
 type ExampleImpl(_node: Node) =
   interface Impl<Node>
@@ -20,6 +22,9 @@ type ExampleImpl(_node: Node) =
 
   [<Export; GodotExportDefaultProvider(typeof<ExportDefaultValues>, "Offset")>]
   member val Offset = Vector2.Zero with get, set
+
+  [<Export; GodotExportDefaultProvider(typeof<ExportDefaultValues>, "CreateOffset")>]
+  member val MethodOffset = Vector2.Zero with get, set
 
   [<Export; GodotExportDefault(PropertyHint.Range)>]
   member val Hint = PropertyHint.None with get, set

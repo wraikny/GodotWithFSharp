@@ -12,6 +12,7 @@
   <ItemGroup>
     <None Include="../../../README.md" Pack="true" PackagePath="/" />
     <Compile Include="Definitions.fs" />
+    <Compile Include="TypeIdentity.fs" />
     <Compile Include="CSharpSyntax.fs" />
     <Compile Include="ExportDefaults.fs" />
     <Compile Include="Analysis.fs" />

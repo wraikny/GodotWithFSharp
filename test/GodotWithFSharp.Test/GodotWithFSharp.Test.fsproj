@@ -11,6 +11,7 @@
     <Compile Include="CliIntegrationTests.fs" />
     <Compile Include="GodotIntegrationTests.fs" />
     <Compile Include="InvalidFixtures.fs" />
+    <Compile Include="RefactoringTests.fs" />
     <Compile Include="GeneratorTests.fs" />
     <ProjectReference Include="../../src/tools/GodotWithFSharp.CodeGenerator/GodotWithFSharp.CodeGenerator.fsproj" />
     <ProjectReference Include="Fixtures/GodotWithFSharp.Test.Fixtures.fsproj" />
