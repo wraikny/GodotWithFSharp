@@ -1,13 +1,14 @@
 <Project>
-  <!-- In a submodule, inherit the nearest enclosing repository's build settings. -->
+  <!-- Share only an explicitly named configuration file. Parent build policy is opt-in. -->
   <PropertyGroup>
-    <_GodotWithFSharpParentBuildProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_GodotWithFSharpParentBuildProps>
+    <GodotWithFSharpConfiguration Condition="'$(GodotWithFSharpConfiguration)' == ''">$([MSBuild]::GetPathOfFileAbove('GodotWithFSharp.props', '$(MSBuildThisFileDirectory)../'))</GodotWithFSharpConfiguration>
+    <_GodotWithFSharpParentBuildProps Condition="'$(GodotWithFSharpImportParentProps)' == 'true'">$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_GodotWithFSharpParentBuildProps>
   </PropertyGroup>
   <Import Project="$(_GodotWithFSharpParentBuildProps)" Condition="'$(_GodotWithFSharpParentBuildProps)' != ''" />
+  <Import Project="$(GodotWithFSharpConfiguration)" Condition="'$(GodotWithFSharpConfiguration)' != ''" />
+  <Import Project="$(MSBuildThisFileDirectory)build/GodotWithFSharp.props" />
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <GodotVersion Condition="'$(GodotVersion)' == ''">4.6.2</GodotVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 </Project>

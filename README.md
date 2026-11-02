@@ -34,7 +34,7 @@ Roslyn は .NET 標準ライブラリ同梱ではなく、ジェネレータの 
 
 ## submodule から利用する
 
-利用先のルートにある `Directory.Build.props` で、GodotSharp のバージョンをまとめて指定できます。
+利用先のルートに共有用の `GodotWithFSharp.props` を置き、GodotSharp のバージョンをまとめて指定します。
 
 ```xml
 <Project>
@@ -44,14 +44,22 @@ Roslyn は .NET 標準ライブラリ同梱ではなく、ジェネレータの 
 </Project>
 ```
 
-このリポジトリの `Directory.Build.props` は、さらに上位にある最寄りの同名ファイルを明示的に読み込みます。
-そのため submodule 内のライブラリ・ジェネレータにも利用先の指定が適用され、
-CLI を別プロセスで起動するときもバージョンの引数を繰り返す必要がありません。
-上位ファイルがない場合や `GodotVersion` が未指定の場合は `4.6.2` を使用します。
-`-p:GodotVersion=...` による上書きも可能です。
-上位ファイルの読み込みは通常の MSBuild Import のため、他のプロパティや ItemGroup も読み込みます。
-このリポジトリ側では対象フレームワークを `net8.0`、XML ドキュメント生成を有効に設定します。
-Godot エンジンと利用先の `Godot.NET.Sdk` のバージョンも指定に揃えてください。
+利用先の `Directory.Build.props` からも、この共有ファイルを Import してください。
+
+```xml
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)GodotWithFSharp.props" />
+</Project>
+```
+
+submodule は上位にある最寄りの `GodotWithFSharp.props` を読みます。任意の場所を使う場合は `GodotWithFSharpConfiguration` にファイルパスを指定できます。
+共有ファイルには Godot 関連の共有値だけを置いてください。上位の `Directory.Build.props` 全体は既定では取り込みません。
+共有値がない場合の GodotVersion は `4.6.2` です。`-p:GodotVersion=...` による上書きも可能です。
+ライブラリ・ツール・テストの対象フレームワークは各プロジェクトで `net8.0` に設定します。
+
+従来の上位 props 継承から移行する間は `-p:GodotWithFSharpImportParentProps=true` で旧方式を明示的に有効化できます。
+この互換モードは上位ファイルの PackageReference や ItemGroup も取り込むため、共有ファイルへの移行を推奨します。
+Godot エンジンと利用先の `Godot.NET.Sdk` も同じバージョンに揃えてください。リポジトリ内の Godot プロジェクトでは SDK の参照バージョンとの不一致を GFS200 / GFS201 で検出します。
 
 利用先の F# プロジェクトにライブラリの参照を追加します。
 

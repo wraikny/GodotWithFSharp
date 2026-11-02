@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
   <PropertyGroup>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Processes.fs" />
+    <Compile Include="BuildConfigurationTests.fs" />
     <Compile Include="InvalidFixtures.fs" />
     <Compile Include="GeneratorTests.fs" />
     <ProjectReference Include="../../src/tools/GodotWithFSharp.CodeGenerator/GodotWithFSharp.CodeGenerator.fsproj" />
