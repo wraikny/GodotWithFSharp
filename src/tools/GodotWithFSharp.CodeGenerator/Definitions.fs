@@ -91,7 +91,10 @@ type NodeDefinition =
     Implementation: TypeReference
     BaseType: TypeReference
     Exports: ExportDefinition array
-    Overrides: OverrideDefinition array }
+    Overrides: OverrideDefinition array
+    Tool: bool
+    DisposeImplementation: bool
+    ImplementsDisposable: bool }
 
 type GenerationDiagnostic =
   { Code: string

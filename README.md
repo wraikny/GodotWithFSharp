@@ -126,6 +126,15 @@ MSBuild の自動実行は実装 DLL が必要になるため循環参照を避�
 
 ## ランタイムヘルパー
 
+実装オブジェクトはノードのコンストラクタで一度だけ生成します。コンストラクタはノード参照の保持と軽量な状態準備に限定し、
+シーンから設定される Export 値や子ノードに依存する処理は `GenerateGodotOverride("_Ready")` で実装してください。
+EnterTree / ExitTree / Ready は Godot の呼び出しどおりに転送します。再入場で実装を作り直したり、独自の初期化フックを挿入したりしません。
+
+`GenerateGodotNode(..., Tool = true)` は生成ノードに Godot の Tool 属性を付けます。既定では付けません。
+実装が `IDisposable` を実装している場合、既定ではノードの最終破棄通知で一度だけ Dispose します。
+`DisposeImplementation = false` で自動破棄を無効化できます。ツリー退出では Dispose しません。
+利用者の `_Notification` 転送と後始末は合成され、後始末は `finally` で実行します。実装側の Dispose から所有元のノードを再び破棄しないでください。
+
 `open GodotWithFSharp` で以下を利用できます。
 
 - `node.GetUnsafeImpl<Implementation>()`: ノードの実装を取得

@@ -7,6 +7,8 @@ type GenerateGodotNode(name: string, ty: Type) =
   inherit Attribute()
   member _.GetGodotName() = name
   member _.GetGodotType() = ty
+  member val Tool = false with get, set
+  member val DisposeImplementation = true with get, set
 
 /// Forwards a Godot virtual method to this implementation method.
 /// Omit the name to override a Godot method with the same name.

@@ -368,3 +368,40 @@ let ``export defaults are explicit typed and never evaluated by generation`` () 
   )
 
   Assert.That(code, Does.Contain("Impl.Speed = _godotExport_Speed"))
+
+[<Test>]
+let ``lifetime generation owns disposal and composes notification callbacks`` () =
+  let code =
+    (Generator.generateTypes "Example" [ typeof<InvalidFixtures.OwnedImplementation> ])
+      .[0].Content
+
+  Assert.That(code, Does.Contain("global::Godot.ToolAttribute"))
+  Assert.That(code, Does.Contain("NotificationPredelete"))
+  Assert.That(code, Does.Contain("finally"))
+  Assert.That(code, Does.Contain("Impl.Notify(arg0)"))
+  Assert.That(code, Does.Contain("global::System.IDisposable"))
+
+  let syntax =
+    Generator.generateSyntax "Example" typeof<InvalidFixtures.OwnedImplementation>
+
+  let methods =
+    syntax.DescendantNodes()
+    |> Seq.choose (
+      function
+      | :? MethodDeclarationSyntax as node -> Some node.Identifier.ValueText
+      | _ -> None
+    )
+    |> Seq.toArray
+
+  Assert.That(
+    methods
+    |> Array.filter ((=) "_Notification")
+    |> Array.length,
+    Is.EqualTo(1)
+  )
+
+  let borrowed =
+    (Generator.generateTypes "Example" [ typeof<InvalidFixtures.BorrowedImplementation> ])
+      .[0].Content
+
+  Assert.That(borrowed, Does.Not.Contain("NotificationPredelete"))

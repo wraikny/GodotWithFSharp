@@ -202,6 +202,10 @@ module Analysis =
         let exports = ResizeArray<ExportDefinition>()
         let memberNames = HashSet<string>(StringComparer.Ordinal)
         memberNames.Add "Impl" |> ignore
+
+        memberNames.Add "_godotImplementationDisposed"
+        |> ignore
+
         memberNames.Add name |> ignore
 
         for prop in
@@ -377,12 +381,23 @@ module Analysis =
               report "GFS016" "" $"Abstract base member must be implemented: {required.Name}."
 
         if diagnostics.Count = count then
+          let flag name fallback =
+            attr.NamedArguments
+            |> Seq.tryFind (fun value -> value.MemberName = name)
+            |> Option.map (fun value -> value.TypedValue.Value :?> bool)
+            |> Option.defaultValue fallback
+
           nodes.Add
             { Name = name
               Implementation = TypeReference.ofType typ
               BaseType = TypeReference.ofType baseType
               Exports = exports.ToArray()
-              Overrides = overrides.ToArray() }
+              Overrides = overrides.ToArray()
+              Tool = flag "Tool" false
+              DisposeImplementation = flag "DisposeImplementation" true
+              ImplementsDisposable =
+                typ.GetInterfaces()
+                |> Array.exists (fun contract -> contract.FullName = "System.IDisposable") }
 
     if diagnostics.Count > 0 then
       raise (GenerationException(diagnostics.ToArray()))

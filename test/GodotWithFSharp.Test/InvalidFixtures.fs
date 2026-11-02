@@ -110,3 +110,20 @@ module InvalidFixtures =
 
     [<Export; GodotExportDefaultProvider(typeof<ExplodingDefaultProvider>, "Value")>]
     member val Speed = 0.0f with get, set
+
+  [<GenerateGodotNode("OwnedNode", typeof<Node>, Tool = true)>]
+  type OwnedImplementation(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()
+
+    [<GenerateGodotOverride("_Notification")>]
+    member _.Notify(_what: int) = ()
+
+  [<GenerateGodotNode("BorrowedNode", typeof<Node>, DisposeImplementation = false)>]
+  type BorrowedImplementation(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()

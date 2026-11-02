@@ -126,7 +126,18 @@ module Generator =
 
       members.Add property
 
-    for method in node.Overrides do
+    let autoDispose =
+      node.DisposeImplementation
+      && node.ImplementsDisposable
+
+    let overrides =
+      node.Overrides
+      |> Array.filter (fun method ->
+        not autoDispose
+        || method.Name <> "_Notification"
+      )
+
+    for method in overrides do
       let targetIdentifier = identifier method.Name
       let ps = method.Parameters
 
@@ -158,6 +169,91 @@ module Generator =
 
       members.Add declaration
 
+    if autoDispose then
+      let disposed = identifierName "_godotImplementationDisposed"
+
+      let booleanType =
+        SyntaxFactory.PredefinedType(SyntaxFactory.Token SyntaxKind.BoolKeyword)
+
+      members.Add(
+        SyntaxFactory
+          .FieldDeclaration(
+            SyntaxFactory
+              .VariableDeclaration(booleanType)
+              .AddVariables(SyntaxFactory.VariableDeclarator(disposed.Identifier))
+          )
+          .WithModifiers(modifiers [| SyntaxKind.PrivateKeyword |])
+      )
+
+      let disposable =
+        SyntaxFactory.ParenthesizedExpression(
+          SyntaxFactory.CastExpression(
+            referenceName (TypeReference.named "System.IDisposable" [||]),
+            identifierName "Impl"
+          )
+        )
+
+      let disposeCall =
+        SyntaxFactory.ExpressionStatement(
+          SyntaxFactory
+            .InvocationExpression(memberAccess disposable "Dispose")
+            .WithArgumentList(SyntaxFactory.ArgumentList())
+        )
+
+      let predelete =
+        SyntaxFactory.BinaryExpression(
+          SyntaxKind.EqualsExpression,
+          identifierName "arg0",
+          memberAccess (referenceName (TypeReference.named "Godot.GodotObject" [||])) "NotificationPredelete"
+        )
+
+      let notDisposed =
+        SyntaxFactory.PrefixUnaryExpression(SyntaxKind.LogicalNotExpression, disposed)
+
+      let condition =
+        SyntaxFactory.BinaryExpression(SyntaxKind.LogicalAndExpression, predelete, notDisposed)
+
+      let cleanup =
+        SyntaxFactory.IfStatement(
+          condition,
+          SyntaxFactory.Block(SyntaxFactory.ExpressionStatement(assignment disposed (constant (box true))), disposeCall)
+        )
+
+      let forwarded =
+        node.Overrides
+        |> Array.tryFind (fun method -> method.Name = "_Notification")
+        |> Option.map (fun method ->
+          SyntaxFactory.ExpressionStatement(
+            SyntaxFactory
+              .InvocationExpression(memberAccess (identifierName "Impl") method.ImplementationName)
+              .AddArgumentListArguments(SyntaxFactory.Argument(identifierName "arg0"))
+          )
+          :> StatementSyntax
+        )
+        |> Option.toArray
+
+      let body =
+        SyntaxFactory.TryStatement(
+          SyntaxFactory.Block(forwarded),
+          SyntaxFactory.List<CatchClauseSyntax>(),
+          SyntaxFactory.FinallyClause(SyntaxFactory.Block(cleanup))
+        )
+
+      members.Add(
+        SyntaxFactory
+          .MethodDeclaration(
+            SyntaxFactory.PredefinedType(SyntaxFactory.Token SyntaxKind.VoidKeyword),
+            identifier "_Notification"
+          )
+          .WithModifiers(modifiers [| SyntaxKind.PublicKeyword; SyntaxKind.OverrideKeyword |])
+          .AddParameterListParameters(
+            SyntaxFactory
+              .Parameter(identifier "arg0")
+              .WithType(SyntaxFactory.PredefinedType(SyntaxFactory.Token SyntaxKind.IntKeyword))
+          )
+          .WithBody(SyntaxFactory.Block(body))
+      )
+
     let runtimeContract =
       TypeReference.named "GodotWithFSharp.RuntimeObject" [| node.BaseType; node.Implementation |]
 
@@ -170,6 +266,18 @@ module Generator =
           SyntaxFactory.SimpleBaseType(referenceName runtimeContract)
         )
         .AddMembers(members.ToArray())
+
+    let declaration =
+      if node.Tool then
+        declaration.AddAttributeLists(
+          SyntaxFactory.AttributeList(
+            SyntaxFactory.SingletonSeparatedList(
+              SyntaxFactory.Attribute(referenceName (TypeReference.named "Godot.ToolAttribute" [||]) :?> NameSyntax)
+            )
+          )
+        )
+      else
+        declaration
 
     let nsDeclaration = SyntaxFactory.NamespaceDeclaration(ns).AddMembers(declaration)
 
