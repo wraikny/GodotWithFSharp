@@ -188,22 +188,14 @@ module Output =
               Hash = currentHash path }
           ) }
 
-  let private prepare (options: OutputOptions) directory (files: GeneratedFile array) =
-    validate options files
-    let previous = loadManifest options directory
-
+  // Cheap preflight avoids creating an output directory or lock for ownership/path errors.
+  // Content hashes are checked only under the lock; no preflight snapshot is reused there.
+  let private checkOwnership directory (files: GeneratedFile array) (previous: OutputManifest) =
     let previousFiles =
       Dictionary<string, OwnedOutputFile>(StringComparer.OrdinalIgnoreCase)
 
     for file in previous.Files do
       previousFiles.Add(file.Name, file)
-      let path = Path.Combine(directory, file.Name)
-
-      if
-        File.Exists path
-        && currentHash path <> file.Hash
-      then
-        invalidOp $"Generated file was edited: {path}. Restore it before generating."
 
     for file in files do
       let path = Path.Combine(directory, file.Name)
@@ -217,14 +209,34 @@ module Output =
       | false, _ when File.Exists path -> invalidOp $"Refusing to overwrite a file not owned by this generator: {path}."
       | _ -> ()
 
+
+  let private prepare (options: OutputOptions) directory (files: GeneratedFile array) =
+    validate options files
+    let previous = loadManifest options directory
+    checkOwnership directory files previous
+
+    // One content read per path for this locked plan (also used by read-only planning).
+    let contents = Dictionary<string, string option>(StringComparer.OrdinalIgnoreCase)
+
+    let existing name =
+      match contents.TryGetValue name with
+      | true, content -> content
+      | _ ->
+        let content = read (Path.Combine(directory, name))
+        contents.Add(name, content)
+        content
+
+    for file in previous.Files do
+      match existing file.Name with
+      | Some content when hash content <> file.Hash ->
+        invalidOp $"Generated file was edited: {Path.Combine(directory, file.Name)}. Restore it before generating."
+      | _ -> ()
+
     let names = files |> Array.map _.Name |> Set.ofArray
 
     let writes, unchanged =
       files
-      |> Array.partition (fun file ->
-        read (Path.Combine(directory, file.Name))
-        <> Some file.Content
-      )
+      |> Array.partition (fun file -> existing file.Name <> Some file.Content)
 
     let deletes =
       previous.Files
@@ -314,8 +326,8 @@ module Output =
     validate options files
 
     if not (File.Exists(Path.Combine(directory, journalName))) then
-      prepare options directory files
-      |> ignore
+      loadManifest options directory
+      |> checkOwnership directory files
 
     Directory.CreateDirectory(directory)
     |> ignore
