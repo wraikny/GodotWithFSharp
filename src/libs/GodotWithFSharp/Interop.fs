@@ -22,6 +22,12 @@ type GenerateGodotOverride(methodName: string) =
 
 open Godot
 
+/// Declares the generated node's editor default and the implementation's initial exported value.
+[<Sealed; AttributeUsage(AttributeTargets.Property)>]
+type GodotExportDefault(value: obj) =
+  inherit Attribute()
+  member _.Value = value
+
 /// A public static property or parameterless method that returns a fresh, deterministic default.
 /// The generator reads metadata only; the provider runs when Godot evaluates defaults or creates a node.
 [<Sealed; AttributeUsage(AttributeTargets.Property)>]

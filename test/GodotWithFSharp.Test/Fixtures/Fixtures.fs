@@ -11,17 +11,17 @@ type ExampleImpl(_node: Node) =
   interface Impl<Node>
 
   [<Export(PropertyHint.Range, "0,10,0.5,quote\"\\\n\t\u0000")>]
-  [<System.ComponentModel.DefaultValue(1.0)>]
+  [<GodotExportDefault(1.0)>]
   member val Speed = 1.0 with get, set
 
   [<Export>]
-  [<System.ComponentModel.DefaultValue("")>]
+  [<GodotExportDefault("")>]
   member val ``event`` = "" with get, set
 
   [<Export; GodotExportDefaultProvider(typeof<ExportDefaultValues>, "Offset")>]
   member val Offset = Vector2.Zero with get, set
 
-  [<Export; System.ComponentModel.DefaultValue(PropertyHint.Range)>]
+  [<Export; GodotExportDefault(PropertyHint.Range)>]
   member val Hint = PropertyHint.None with get, set
 
   [<GenerateGodotOverride>]

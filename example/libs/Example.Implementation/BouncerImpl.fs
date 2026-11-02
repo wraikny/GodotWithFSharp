@@ -10,7 +10,7 @@ type BouncerImpl(node: Node2D) =
   interface Impl<Node2D>
 
   [<Export(PropertyHint.Range, "40,600,10")>]
-  [<System.ComponentModel.DefaultValue(180.0f)>]
+  [<GodotExportDefault(180.0f)>]
   member val Speed = 180.0f with get, set
 
   member _.Reset() =

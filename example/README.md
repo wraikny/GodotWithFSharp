@@ -28,7 +28,7 @@ godot --path example/apps/Godot
 ```
 
 `BouncerImpl.fs` の `[<Export>]` が Godot のインスペクターに転送されます。
-`System.ComponentModel.DefaultValue(180.0f)` で既定値を明示し、エディターと実行時の初期値を一致させています。
+`GodotExportDefault(180.0f)` で既定値を明示し、エディターと実行時の初期値を一致させています。
 `Main.tscn` の Bouncer ノードでは Speed を既定の 180 から 240 に変更しています。
 `[<GenerateGodotOverride>]` により `_Ready` と `_Process` を F# に転送します。
 `BouncerImpl.Update` では `[<GenerateGodotOverride("_Process")>]` で実装と override 先の名前を分けています。

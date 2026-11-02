@@ -59,16 +59,16 @@ module internal ExportDefaults =
         Ok(StaticProvider(TypeReference.ofType typ, name, methods.Length = 1))
 
   let read (prop: PropertyInfo) =
-    let constant = attribute "System.ComponentModel.DefaultValueAttribute" prop
+    let constant = attribute "GodotWithFSharp.GodotExportDefault" prop
     let factory = attribute "GodotWithFSharp.GodotExportDefaultProvider" prop
 
     match constant, factory with
     | None, None ->
-      Error "Export requires DefaultValue or GodotExportDefaultProvider; defaults must be declared explicitly."
+      Error "Export requires GodotExportDefault or GodotExportDefaultProvider; defaults must be declared explicitly."
     | Some _, Some _ -> Error "Use exactly one default declaration per Export."
     | None, Some attr -> provider prop attr
     | Some attr, None when attr.ConstructorArguments.Count <> 1 ->
-      Error "Use the single-value DefaultValue constructor; type converters are not executed during generation."
+      Error "Use the single-value GodotExportDefault constructor; type converters are not executed during generation."
     | Some attr, None ->
       let raw = unwrap attr.ConstructorArguments.[0]
 
@@ -85,4 +85,4 @@ module internal ExportDefaults =
       if validNull || validValue then
         Ok(Constant raw)
       else
-        Error $"DefaultValue must match the exported property type {prop.PropertyType}."
+        Error $"GodotExportDefault must match the exported property type {prop.PropertyType}."

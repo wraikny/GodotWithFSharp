@@ -16,27 +16,27 @@ type LifecycleProbeImpl(_node: Node) =
   let mutable disposed = false
   interface Impl<Node>
 
-  [<Export; System.ComponentModel.DefaultValue(0)>]
+  [<Export; GodotExportDefault(0)>]
   member _.EnterCount
     with get () = enters
     and set (_value: int) = ()
 
-  [<Export; System.ComponentModel.DefaultValue(0)>]
+  [<Export; GodotExportDefault(0)>]
   member _.ExitCount
     with get () = exits
     and set (_value: int) = ()
 
-  [<Export; System.ComponentModel.DefaultValue(0)>]
+  [<Export; GodotExportDefault(0)>]
   member _.ReadyCount
     with get () = readies
     and set (_value: int) = ()
 
-  [<Export; System.ComponentModel.DefaultValue(0)>]
+  [<Export; GodotExportDefault(0)>]
   member _.DisposedCount
     with get () = Counters.Disposed
     and set (_value: int) = ()
 
-  [<Export; System.ComponentModel.DefaultValue(true)>]
+  [<Export; GodotExportDefault(true)>]
   member _.OrderValid
     with get () = Counters.OrderValid
     and set (_value: bool) = ()
@@ -79,7 +79,7 @@ type HelperProbeImpl(node: Node) =
   let mutable valid = false
   interface Impl<Node>
 
-  [<Export; System.ComponentModel.DefaultValue(false)>]
+  [<Export; GodotExportDefault(false)>]
   member _.Valid
     with get () = valid
     and set (_value: bool) = ()

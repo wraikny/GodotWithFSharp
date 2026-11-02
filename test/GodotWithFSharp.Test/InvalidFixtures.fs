@@ -98,7 +98,7 @@ module InvalidFixtures =
   type WrongDefault(_node: Node) =
     interface Impl<Node>
 
-    [<Export; System.ComponentModel.DefaultValue("wrong")>]
+    [<Export; GodotExportDefault("wrong")>]
     member val Speed = 180.0f with get, set
 
   type ExplodingDefaultProvider =
