@@ -198,5 +198,17 @@ dotnet tool restore
 dotnet fsi build.fsx --target Format.Check
 ```
 
-テストは GodotSharp の実 API を使い、生成された C# を一時ディレクトリでビルドします。
-Godot エディタ内のシーン実行はこのテストの対象外です。
+通常のテストは GodotSharp の実 API、CLI の別プロセス実行、Godot.NET.Sdk の初回・再ビルドを検証します。
+`Fixtures` は生成の入力となる独立した F# アセンブリです。テスト本体とは別にビルドして DLL 解析を検証します。
+
+Godot 本体を使うテストは `GODOT_BIN` に 4.6.2 .NET 版の実行ファイルの絶対パスを指定して実行します。
+未指定の場合は Godot カテゴリのテストだけをスキップします。指定した実行ファイルやバージョンが不正なら失敗します。
+
+```powershell
+$env:GODOT_BIN = 'C:/Tools/Godot/Godot_v4.6.2-stable_mono_win64_console.exe'
+dotnet test GodotWithFSharp.sln --filter TestCategory=Godot
+```
+
+ヘッドレスのエディター import、Export 既定値とシーン値、サンプルの移動・リセット、
+ツリー再入場・RequestReady・最終破棄、実装取得ヘルパーまでを実行します。
+終了コードと成功マーカーの両方を確認し、エンジンエラーやタイムアウトも失敗として扱います。

@@ -8,6 +8,8 @@
     <Compile Include="Processes.fs" />
     <Compile Include="BuildConfigurationTests.fs" />
     <Compile Include="BuildIntegrationTests.fs" />
+    <Compile Include="CliIntegrationTests.fs" />
+    <Compile Include="GodotIntegrationTests.fs" />
     <Compile Include="InvalidFixtures.fs" />
     <Compile Include="GeneratorTests.fs" />
     <ProjectReference Include="../../src/tools/GodotWithFSharp.CodeGenerator/GodotWithFSharp.CodeGenerator.fsproj" />
