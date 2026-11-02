@@ -55,6 +55,26 @@ type RuntimeObject<'node, 'impl when 'node :> Node and 'impl :> Impl<'node>> =
 
 [<AutoOpen>]
 module Extension =
+  let private tryRuntime<'node, 'impl when 'node :> Node and 'node: not struct and 'impl :> Impl<'node>>
+    (parent: Node)
+    (path: NodePath)
+    =
+    if not (GodotObject.IsInstanceValid parent) then
+      None
+    else
+      match box (parent.GetNodeOrNull<Node>(path)) with
+      | :? 'node as child when GodotObject.IsInstanceValid child ->
+        match box child with
+        | :? RuntimeObject<'node, 'impl> as runtime ->
+          let impl = runtime.Impl
+
+          if isNull (box impl) then
+            None
+          else
+            Some(struct (child, impl))
+        | _ -> None
+      | _ -> None
+
   type Node with
 
     /// None also covers freed nodes and custom runtime objects returning a null implementation.
@@ -63,7 +83,9 @@ module Extension =
         None
       else
         match box this with
-        | :? RuntimeObject<'impl> as runtime when not (isNull (box runtime.Impl)) -> Some runtime.Impl
+        | :? RuntimeObject<'impl> as runtime ->
+          let impl = runtime.Impl
+          if isNull (box impl) then None else Some impl
         | _ -> None
 
     member this.GetUnsafeImpl<'impl when 'impl :> Impl>() =
@@ -86,17 +108,8 @@ module Extension =
     member this.TryGetRuntimeNode<'node, 'impl when 'node :> Node and 'node: not struct and 'impl :> Impl<'node>>
       (path: NodePath)
       : 'node option =
-      if not (GodotObject.IsInstanceValid this) then
-        None
-      else
-        match box (this.GetNodeOrNull<Node>(path)) with
-        | :? 'node as child when
-          (box child :? RuntimeObject<'node, 'impl>)
-          && GodotObject.IsInstanceValid child
-          && Option.isSome (child.TryGetImpl<'impl>())
-          ->
-          Some child
-        | _ -> None
+      tryRuntime<'node, 'impl> this path
+      |> Option.map (fun struct (node, _) -> node)
 
     member this.GetRuntimeNode<'node, 'impl when 'node :> Node and 'node: not struct and 'impl :> Impl<'node>>
       (path: NodePath)
@@ -110,13 +123,18 @@ module Extension =
     member this.TryGetRuntimeImpl<'node, 'impl when 'node :> Node and 'node: not struct and 'impl :> Impl<'node>>
       (path: NodePath)
       =
-      this.TryGetRuntimeNode<'node, 'impl>(path)
-      |> Option.bind (fun node -> node.TryGetImpl<'impl>())
+      tryRuntime<'node, 'impl> this path
+      |> Option.map (fun struct (_, impl) -> impl)
 
     member this.GetRuntimeImpl<'node, 'impl when 'node :> Node and 'node: not struct and 'impl :> Impl<'node>>
       (path: NodePath)
       =
-      this.GetRuntimeNode<'node, 'impl>(path).GetUnsafeImpl<'impl>()
+      match tryRuntime<'node, 'impl> this path with
+      | Some struct (_, impl) -> impl
+      | None ->
+        invalidOp
+          $"Node at '{path}' does not implement RuntimeObject<{typeof<'node>.FullName}, {typeof<'impl>.FullName}>."
+
 
   type PackedScene with
 
@@ -126,8 +144,10 @@ module Extension =
       try
         match box instance with
         | :? RuntimeObject<'node, 'impl> as runtime ->
+          let impl = runtime.Impl
+
           match box instance with
-          | :? 'node as node when not (isNull (box runtime.Impl)) -> node, runtime.Impl
+          | :? 'node as node when not (isNull (box impl)) -> node, impl
           | _ -> invalidOp $"Scene root is not {typeof<'node>.FullName}."
         | _ ->
           invalidOp $"Scene root does not expose RuntimeObject<{typeof<'node>.FullName}, {typeof<'impl>.FullName}>."

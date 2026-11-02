@@ -80,6 +80,20 @@ type BorrowedProbeImpl(_node: Node) =
 type private Expected2DImpl() =
   interface Impl<Node2D>
 
+type private CountingImpl() =
+  interface Impl<Node>
+
+type private CountingRuntimeNode() =
+  inherit Node()
+  let impl = CountingImpl()
+  member val Reads = 0 with get, set
+  member _.Expected = impl
+
+  interface RuntimeObject<Node, CountingImpl> with
+    member this.Impl =
+      this.Reads <- this.Reads + 1
+      impl
+
 [<GenerateGodotNode("HelperProbe", typeof<Node>)>]
 type HelperProbeImpl(node: Node) =
   let mutable valid = false
@@ -106,6 +120,33 @@ type HelperProbeImpl(node: Node) =
       && Option.isNone (node.TryGetImpl<BorrowedProbeImpl>())
       && obj.ReferenceEquals(this, node.GetParent().GetRuntimeImpl<Node, HelperProbeImpl>(selfPath))
       && obj.ReferenceEquals(node, node.GetParent().GetRuntimeNode<Node, HelperProbeImpl>(selfPath))
+
+    let counted = new CountingRuntimeNode(Name = "Counted")
+    node.AddChild counted
+
+    let queries =
+      [ (fun () -> obj.ReferenceEquals(counted.Expected, counted.GetUnsafeImpl<CountingImpl>()))
+        (fun () ->
+          counted.TryGetImpl<CountingImpl>()
+          |> Option.exists (fun impl -> obj.ReferenceEquals(impl, counted.Expected))
+        )
+        (fun () -> obj.ReferenceEquals(counted, node.GetRuntimeNode<Node, CountingImpl>("Counted")))
+        (fun () ->
+          node.TryGetRuntimeNode<Node, CountingImpl>("Counted")
+          |> Option.exists (fun child -> obj.ReferenceEquals(child, counted))
+        )
+        (fun () -> obj.ReferenceEquals(counted.Expected, node.GetRuntimeImpl<Node, CountingImpl>("Counted")))
+        (fun () ->
+          node.TryGetRuntimeImpl<Node, CountingImpl>("Counted")
+          |> Option.exists (fun impl -> obj.ReferenceEquals(impl, counted.Expected))
+        ) ]
+
+    for query in queries do
+      counted.Reads <- 0
+      let result = query ()
+      valid <- valid && result && counted.Reads = 1
+
+    counted.Free()
 
     try
       node.GetRuntimeNode<Node, HelperProbeImpl>("Plain")
