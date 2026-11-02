@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Definitions.fs" />
     <Compile Include="CSharpSyntax.fs" />
+    <Compile Include="ExportDefaults.fs" />
     <Compile Include="Analysis.fs" />
     <Compile Include="Metadata.fs" />
     <Compile Include="Generator.fs" />

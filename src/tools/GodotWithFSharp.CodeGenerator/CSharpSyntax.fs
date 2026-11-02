@@ -111,6 +111,72 @@ module internal CSharpSyntax =
       .AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
       .WithBody(SyntaxFactory.Block(SyntaxFactory.ExpressionStatement(assignment target (identifierName "value"))))
 
+  let constant (value: obj) : ExpressionSyntax =
+    let numeric token =
+      SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, token) :> ExpressionSyntax
+
+    match value with
+    | null -> SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression) :> ExpressionSyntax
+    | :? bool as value ->
+      SyntaxFactory.LiteralExpression(
+        if value then
+          SyntaxKind.TrueLiteralExpression
+        else
+          SyntaxKind.FalseLiteralExpression
+      )
+      :> ExpressionSyntax
+    | :? string as value ->
+      SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(value))
+      :> ExpressionSyntax
+    | :? char as value ->
+      SyntaxFactory.LiteralExpression(SyntaxKind.CharacterLiteralExpression, SyntaxFactory.Literal(value))
+      :> ExpressionSyntax
+    | :? float32 as value when
+      Single.IsNaN value
+      || Single.IsInfinity value
+      ->
+      memberAccess
+        (referenceName (TypeReference.named "System.Single" [||]))
+        (if Single.IsNaN value then "NaN"
+         elif value > 0.0f then "PositiveInfinity"
+         else "NegativeInfinity")
+      :> ExpressionSyntax
+    | :? double as value when
+      Double.IsNaN value
+      || Double.IsInfinity value
+      ->
+      memberAccess
+        (referenceName (TypeReference.named "System.Double" [||]))
+        (if Double.IsNaN value then "NaN"
+         elif value > 0.0 then "PositiveInfinity"
+         else "NegativeInfinity")
+      :> ExpressionSyntax
+    | :? float32 as value -> numeric (SyntaxFactory.Literal(value))
+    | :? double as value -> numeric (SyntaxFactory.Literal(value))
+    | :? uint64 as value -> numeric (SyntaxFactory.Literal(value))
+    | :? int64 as value -> numeric (SyntaxFactory.Literal(value))
+    | :? uint32 as value -> numeric (SyntaxFactory.Literal(value))
+    | :? int as value -> numeric (SyntaxFactory.Literal(value))
+    | :? byte as value -> numeric (SyntaxFactory.Literal(int value))
+    | :? sbyte as value -> numeric (SyntaxFactory.Literal(int value))
+    | :? int16 as value -> numeric (SyntaxFactory.Literal(int value))
+    | :? uint16 as value -> numeric (SyntaxFactory.Literal(int value))
+    | _ -> invalidArg "value" $"Unsupported default constant: {value}."
+
+  let defaultExpression (typ: TypeReference) value : ExpressionSyntax =
+    match value with
+    | Constant value -> SyntaxFactory.CastExpression(referenceName typ, constant value) :> ExpressionSyntax
+    | StaticProvider(typ, name, isMethod) ->
+      let memberNode = memberAccess (referenceName typ) name
+
+      if isMethod then
+        SyntaxFactory
+          .InvocationExpression(memberNode)
+          .WithArgumentList(SyntaxFactory.ArgumentList())
+        :> ExpressionSyntax
+      else
+        memberNode :> ExpressionSyntax
+
   let render (syntax: CompilationUnitSyntax) =
     syntax.NormalizeWhitespace("    ", "\n").ToFullString()
     + "\n"

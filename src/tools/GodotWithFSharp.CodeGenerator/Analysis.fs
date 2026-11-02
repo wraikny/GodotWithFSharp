@@ -231,6 +231,17 @@ module Analysis =
             if not (variantCompatible prop.PropertyType) then
               report "GFS011" ("." + prop.Name) $"Unsupported Godot Export type: {prop.PropertyType}."
 
+            let defaultValue = ExportDefaults.read prop
+
+            match defaultValue with
+            | Error message -> report "GFS020" ("." + prop.Name) message
+            | Ok _ -> ()
+
+            let fieldName = "_godotExport_" + prop.Name
+
+            if not (memberNames.Add fieldName) then
+              report "GFS015" ("." + prop.Name) $"Generated backing field '{fieldName}' conflicts with another member."
+
             if diagnostics.Count = count then
               let hint =
                 if export.ConstructorArguments.Count > 0 then
@@ -248,7 +259,11 @@ module Analysis =
                 { Name = prop.Name
                   Type = TypeReference.ofType prop.PropertyType
                   Hint = hint
-                  HintString = if isNull hintString then "" else hintString }
+                  HintString = if isNull hintString then "" else hintString
+                  Default =
+                    match defaultValue with
+                    | Ok value -> value
+                    | Error _ -> failwith "Validated default missing." }
 
         let overrides = ResizeArray<OverrideDefinition>()
         let signatures = HashSet<string>()

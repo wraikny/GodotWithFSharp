@@ -69,11 +69,16 @@ module TypeReference =
       )
       |> Named
 
+type DefaultExpression =
+  | Constant of obj
+  | StaticProvider of declaringType: TypeReference * memberName: string * isMethod: bool
+
 type ExportDefinition =
   { Name: string
     Type: TypeReference
     Hint: int
-    HintString: string }
+    HintString: string
+    Default: DefaultExpression }
 
 type OverrideDefinition =
   { Name: string

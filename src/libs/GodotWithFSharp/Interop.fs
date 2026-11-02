@@ -20,6 +20,14 @@ type GenerateGodotOverride(methodName: string) =
 
 open Godot
 
+/// A public static property or parameterless method that returns a fresh, deterministic default.
+/// The generator reads metadata only; the provider runs when Godot evaluates defaults or creates a node.
+[<Sealed; AttributeUsage(AttributeTargets.Property)>]
+type GodotExportDefaultProvider(declaringType: Type, memberName: string) =
+  inherit Attribute()
+  member _.DeclaringType = declaringType
+  member _.MemberName = memberName
+
 [<Interface>]
 type Impl =
   interface

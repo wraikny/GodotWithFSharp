@@ -86,3 +86,27 @@ module InvalidFixtures =
 
     [<Export>]
     member val Value = DateTime.MinValue with get, set
+
+  [<GenerateGodotNode("MissingDefaultNode", typeof<Node>)>]
+  type MissingDefault(_node: Node) =
+    interface Impl<Node>
+
+    [<Export>]
+    member val Speed = 180.0f with get, set
+
+  [<GenerateGodotNode("WrongDefaultNode", typeof<Node>)>]
+  type WrongDefault(_node: Node) =
+    interface Impl<Node>
+
+    [<Export; System.ComponentModel.DefaultValue("wrong")>]
+    member val Speed = 180.0f with get, set
+
+  type ExplodingDefaultProvider =
+    static member Value: float32 = failwith "Default providers must not run in the generator."
+
+  [<GenerateGodotNode("MetadataOnlyDefaultNode", typeof<Node>)>]
+  type MetadataOnlyDefault(_node: Node) =
+    interface Impl<Node>
+
+    [<Export; GodotExportDefaultProvider(typeof<ExplodingDefaultProvider>, "Value")>]
+    member val Speed = 0.0f with get, set

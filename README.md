@@ -70,6 +70,7 @@ type PlayerImpl(node: Node2D) =
   interface Impl<Node2D>
 
   [<Export(PropertyHint.Range, "0,100,0.5")>]
+  [<System.ComponentModel.DefaultValue(10.0)>]
   member val Speed = 10.0 with get, set
 
   [<GenerateGodotOverride("_Process")>]
@@ -84,6 +85,11 @@ type PlayerImpl(node: Node2D) =
 dotnet build src/Example.Implementation/Example.Implementation.fsproj
 dotnet run --project libs/GodotWithFSharp/src/tools/GodotWithFSharp.CodeGenerator -- --assembly src/Example.Implementation/bin/Debug/net8.0/Example.Implementation.dll --namespace Example.Generated --output apps/Godot/scripts/generated
 ```
+
+Export の既定値は `System.ComponentModel.DefaultValue` で明示してください。宣言値は生成ノードの既定値と実装生成時の初期値の両方に使われます。
+複合型は `[<GodotExportDefaultProvider(typeof<Defaults>, "Offset")>]` で公開 static プロパティまたは引数なし static メソッドを指定できます。
+提供メンバーはプロパティと同じ型を返し、副作用を持たず、可変な値は呼び出しごとに作成してください。ジェネレータは提供メンバーを実行しません。
+既定値の省略・型の不一致・二重指定は生成時のエラーです。
 
 生成コードは `Node2D` を継承した `public partial class PlayerNode` となります。
 コンストラクタで `new PlayerImpl(this)` を呼び、`Impl` プロパティを公開し、

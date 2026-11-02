@@ -41,7 +41,7 @@ let ``discovers annotated types and forwards exports and virtual methods`` () =
     Assert.That(code, Does.Contain(expected))
 
   Assert.That(code, Does.Contain("private global::System.Double Speed"))
-  Assert.That(code, Does.Contain("return Impl.Speed;"))
+  Assert.That(code, Does.Contain("return _godotExport_Speed;"))
   Assert.That(code, Does.Contain("Impl.Speed = value;"))
   Assert.That(code, Does.Contain("global::Godot.PropertyHint)1"))
   Assert.That(code, Does.Contain("private global::System.String @event"))
@@ -340,3 +340,31 @@ let ``metadata definitions remain usable after inspection context is disposed`` 
     |> ignore
   )
   |> ignore
+
+[<Test>]
+let ``export defaults are explicit typed and never evaluated by generation`` () =
+  for typ in [ typeof<InvalidFixtures.MissingDefault>; typeof<InvalidFixtures.WrongDefault> ] do
+    let error =
+      Assert.Throws<GenerationException>(fun () ->
+        Generator.generateTypes "Example" [ typ ]
+        |> ignore
+      )
+
+    Assert.That(
+      error.Diagnostics
+      |> Array.exists (fun d -> d.Code = "GFS020"),
+      Is.True
+    )
+
+  let files =
+    Generator.generateTypes "Example" [ typeof<InvalidFixtures.MetadataOnlyDefault> ]
+
+  Assert.That(files.[0].Content, Does.Contain("ExplodingDefaultProvider.Value"))
+  let code = (generate ()).[0].Content
+
+  Assert.That(
+    code,
+    Does.Contain("_godotExport_Offset = global::GodotWithFSharp.Test.Fixtures.ExportDefaultValues.Offset")
+  )
+
+  Assert.That(code, Does.Contain("Impl.Speed = _godotExport_Speed"))

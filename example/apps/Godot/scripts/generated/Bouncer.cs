@@ -8,19 +8,23 @@ namespace Example.Generated
         public Bouncer()
         {
             Impl = new global::Example.Implementation.BouncerImpl(this);
+            Impl.Speed = _godotExport_Speed;
         }
 
+        private global::System.Single _godotExport_Speed = (global::System.Single)180F;
         [global::Godot.ExportAttribute((global::Godot.PropertyHint)1, "40,600,10")]
         private global::System.Single Speed
         {
             get
             {
-                return Impl.Speed;
+                _godotExport_Speed = Impl.Speed;
+                return _godotExport_Speed;
             }
 
             set
             {
                 Impl.Speed = value;
+                _godotExport_Speed = value;
             }
         }
 

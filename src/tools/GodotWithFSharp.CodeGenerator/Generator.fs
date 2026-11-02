@@ -1,4 +1,4 @@
-﻿namespace GodotWithFSharp.CodeGenerator
+namespace GodotWithFSharp.CodeGenerator
 
 open System
 open System.IO
@@ -51,7 +51,16 @@ module Generator =
         .WithModifiers(modifiers [| SyntaxKind.PublicKeyword |])
         .WithBody(SyntaxFactory.Block(SyntaxFactory.ExpressionStatement(assignment (identifierName "Impl") instance)))
 
-    members.Add constructor
+    let defaultAssignments =
+      node.Exports
+      |> Array.map (fun prop ->
+        SyntaxFactory.ExpressionStatement(
+          assignment (memberAccess (identifierName "Impl") prop.Name) (identifierName ("_godotExport_" + prop.Name))
+        )
+        :> StatementSyntax
+      )
+
+    members.Add(constructor.WithBody(constructor.Body.AddStatements(defaultAssignments)))
 
     for prop in node.Exports do
       let hint =
@@ -69,13 +78,51 @@ module Generator =
           .AddArgumentListArguments(SyntaxFactory.AttributeArgument(hint), SyntaxFactory.AttributeArgument(hintString))
 
       let target = memberAccess (identifierName "Impl") prop.Name
+      let fieldName = "_godotExport_" + prop.Name
+      let field = identifierName fieldName
+
+      let variable =
+        SyntaxFactory
+          .VariableDeclarator(identifier fieldName)
+          .WithInitializer(SyntaxFactory.EqualsValueClause(defaultExpression prop.Type prop.Default))
+
+      members.Add(
+        SyntaxFactory
+          .FieldDeclaration(
+            SyntaxFactory
+              .VariableDeclaration(referenceName prop.Type)
+              .AddVariables(variable)
+          )
+          .WithModifiers(modifiers [| SyntaxKind.PrivateKeyword |])
+      )
+      // A single field return exposes the initializer to Godot's default-value analyzer.
+      // Refresh from Impl first so implementation-side writes remain visible immediately.
+      let getAccessor =
+        SyntaxFactory
+          .AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+          .WithBody(
+            SyntaxFactory.Block(
+              SyntaxFactory.ExpressionStatement(assignment field target),
+              SyntaxFactory.ReturnStatement(field)
+            )
+          )
+
+      let setAccessor =
+        SyntaxFactory
+          .AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+          .WithBody(
+            SyntaxFactory.Block(
+              SyntaxFactory.ExpressionStatement(assignment target (identifierName "value")),
+              SyntaxFactory.ExpressionStatement(assignment field (identifierName "value"))
+            )
+          )
 
       let property =
         SyntaxFactory
           .PropertyDeclaration(referenceName prop.Type, identifier prop.Name)
           .WithModifiers(modifiers [| SyntaxKind.PrivateKeyword |])
           .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(exportAttribute)))
-          .AddAccessorListAccessors(getter target, setter target)
+          .AddAccessorListAccessors(getAccessor, setAccessor)
 
       members.Add property
 
