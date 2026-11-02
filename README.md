@@ -138,11 +138,17 @@ EnterTree / ExitTree / Ready は Godot の呼び出しどおりに転送しま�
 `open GodotWithFSharp` で以下を利用できます。
 
 - `node.GetUnsafeImpl<Implementation>()`: ノードの実装を取得
+- `node.TryGetImpl<Implementation>()`: 生存中の対応する実装があれば `Some`、なければ `None`
 - `node.GetNodeImpl<Implementation>(path)`: 子ノードの実装を取得
+- `node.TryGetNodeImpl<Implementation>(path)`: 子ノードの実装を安全に取得
 - `node.GetRuntimeNode<NodeType, Implementation>(path)`: 子ノードを取得
 - `node.GetRuntimeImpl<NodeType, Implementation>(path)`: 子ノードの実装を取得
+- `node.TryGetRuntimeNode<NodeType, Implementation>(path)` / `TryGetRuntimeImpl`: ノード型と実装の対応を検証して取得
 - `scene.InstantiateWithImpl<NodeType, Implementation>()`: ノードと実装のペアを生成
 - `GD.LoadNodeWithImpl<NodeType, Implementation>(path)`: PackedScene をロードしてペアを生成
+
+`GetRuntimeNode` は通常のノード取得に加えて `RuntimeObject<NodeType, Implementation>` の実装も確認します。
+`InstantiateWithImpl` の実装型は `Impl<NodeType>` に制約されます。シーンのルートが契約に合わない場合は生成したノードを解放してから例外にします。
 
 ## ビルドとテスト
 

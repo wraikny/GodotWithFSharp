@@ -24,6 +24,10 @@ func _initialize():
     var borrowed = load("res://scripts/generated/BorrowedProbe.cs").new()
     borrowed.free()
     valid = valid and observer.get("DisposedCount") == 2
+    var helper = load("res://scripts/generated/HelperProbe.cs").new()
+    root.add_child(helper)
+    valid = valid and helper.get("Valid")
+    helper.free()
     observer.free()
     if not valid:
         printerr("Lifecycle, reentry, or disposal contract failed.")
