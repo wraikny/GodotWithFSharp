@@ -244,12 +244,19 @@ let ``CLI validates arguments and generates from an external assembly`` () =
            typeof<ExampleImpl>.Assembly.Location
            "--namespace"
            "External.Generated"
+           "--owner"
+           "GodotWithFSharp"
            "--output"
            dir |],
       Is.Zero
     )
 
     Assert.That(Directory.GetFiles(dir, "*.cs").Length, Is.EqualTo(2))
+
+    use manifest =
+      Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, Output.manifestName)))
+
+    Assert.That(manifest.RootElement.GetProperty("Owner").GetString(), Is.EqualTo("GodotWithFSharp"))
 
     Assert.That(
       Program.run
@@ -405,3 +412,161 @@ let ``lifetime generation owns disposal and composes notification callbacks`` ()
       .[0].Content
 
   Assert.That(borrowed, Does.Not.Contain("NotificationPredelete"))
+
+[<Test>]
+let ``output requires explicit empty generation and preserves Godot uid files`` () =
+  withDirectory (fun directory ->
+    let files = generate ()
+    Generator.writeFiles directory files
+    let uid = Path.Combine(directory, files.[0].Name + ".uid")
+    File.WriteAllText(uid, "uid://example")
+
+    Assert.Throws<InvalidOperationException>(fun () -> Generator.writeFiles directory [||])
+    |> ignore
+
+    Assert.That(Directory.GetFiles(directory, "*.cs").Length, Is.EqualTo(files.Length))
+
+    Output.write
+      { Output.defaults with
+          AllowEmpty = true }
+      directory
+      [||]
+    |> ignore
+
+    Assert.That(Directory.GetFiles(directory, "*.cs"), Is.Empty)
+    Assert.That(File.ReadAllText uid, Is.EqualTo("uid://example"))
+  )
+
+[<Test>]
+let ``output rejects another owner or edited generated source`` () =
+  withDirectory (fun directory ->
+    let files = generate ()
+    Generator.writeFiles directory files
+
+    Assert.Throws<InvalidOperationException>(fun () ->
+      Output.write { Output.defaults with Owner = "Other" } directory files
+      |> ignore
+    )
+    |> ignore
+
+    let path = Path.Combine(directory, files.[0].Name)
+    File.AppendAllText(path, "// manual change")
+
+    Assert.Throws<InvalidOperationException>(fun () -> Generator.writeFiles directory files)
+    |> ignore
+
+    Assert.That(File.ReadAllText path, Does.EndWith("// manual change"))
+  )
+
+[<Test>]
+let ``output dry run is read only and legacy adoption is explicit`` () =
+  withDirectory (fun directory ->
+    let files = generate ()
+    let target = Path.Combine(directory, "dry-run")
+    let changes = Output.plan Output.defaults target files
+    Assert.That(changes.Write.Length, Is.EqualTo(files.Length))
+    Assert.That(Directory.Exists target, Is.False)
+    File.WriteAllText(Path.Combine(directory, files.[0].Name), files.[0].Content)
+
+    Assert.Throws<InvalidOperationException>(fun () -> Generator.writeFiles directory files)
+    |> ignore
+
+    Output.write
+      { Output.defaults with
+          AdoptExisting = true }
+      directory
+      files
+    |> ignore
+
+    Assert.That(File.Exists(Path.Combine(directory, Output.manifestName)), Is.True)
+  )
+
+[<Test>]
+let ``output recovers an interrupted transaction before generating`` () =
+  withDirectory (fun directory ->
+    let files = generate ()
+    Generator.writeFiles directory files
+    let path = Path.Combine(directory, files.[0].Name)
+
+    let partial =
+      files.[0].Content
+      + "// interrupted write"
+
+    File.WriteAllText(path, partial)
+
+    let hash =
+      Convert.ToHexString(Security.Cryptography.SHA256.HashData(Text.Encoding.UTF8.GetBytes partial))
+
+    let journal =
+      {| Version = 1
+         Files =
+          [| {| Name = files.[0].Name
+                Before = files.[0].Content
+                Existed = true
+                AfterHash = hash |} |] |}
+
+    let journalPath = Path.Combine(directory, ".godotwithfsharp.transaction.json")
+    File.WriteAllText(journalPath, Text.Json.JsonSerializer.Serialize(journal))
+    Generator.writeFiles directory files
+    Assert.That(File.ReadAllText path, Is.EqualTo(files.[0].Content))
+    Assert.That(File.Exists journalPath, Is.False)
+  )
+
+[<Test>]
+let ``input set changes require explicit acknowledgement`` () =
+  withDirectory (fun directory ->
+    let files = generate ()
+
+    let original =
+      { Output.defaults with
+          Inputs = [| "Original.dll" |] }
+
+    Output.write original directory files
+    |> ignore
+
+    let changed =
+      { original with
+          Inputs = [| "Different.dll" |] }
+
+    Assert.Throws<InvalidOperationException>(fun () ->
+      Output.write changed directory files
+      |> ignore
+    )
+    |> ignore
+
+    Output.write { changed with AllowInputChange = true } directory files
+    |> ignore
+
+    Assert.That(File.ReadAllText(Path.Combine(directory, Output.manifestName)), Does.Contain("Different.dll"))
+  )
+
+[<Test>]
+let ``recovery preserves changes made after an interrupted transaction`` () =
+  withDirectory (fun directory ->
+    let files = generate ()
+    Generator.writeFiles directory files
+    let path = Path.Combine(directory, files.[0].Name)
+    let partial = files.[0].Content + "// interrupted"
+
+    let hash =
+      Convert.ToHexString(Security.Cryptography.SHA256.HashData(Text.Encoding.UTF8.GetBytes partial))
+
+    let journal =
+      {| Version = 1
+         Files =
+          [| {| Name = files.[0].Name
+                Before = files.[0].Content
+                Existed = true
+                AfterHash = hash |} |] |}
+
+    let journalPath = Path.Combine(directory, ".godotwithfsharp.transaction.json")
+    File.WriteAllText(journalPath, Text.Json.JsonSerializer.Serialize(journal))
+    let manual = partial + "// edited afterwards"
+    File.WriteAllText(path, manual)
+
+    Assert.Throws<InvalidOperationException>(fun () -> Generator.writeFiles directory files)
+    |> ignore
+
+    Assert.That(File.ReadAllText path, Is.EqualTo(manual))
+    Assert.That(File.Exists journalPath, Is.True)
+  )

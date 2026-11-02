@@ -1,0 +1,17 @@
+{
+  "Version": 1,
+  "Owner": "Example.Generated",
+  "Inputs": [
+    "Example.Implementation.dll"
+  ],
+  "Files": [
+    {
+      "Name": "Bouncer.cs",
+      "Hash": "D538115AC5CD545E01257963CDE6BCFEA5E6B90650B1445BA6DD176AFCBEAF94"
+    },
+    {
+      "Name": "Main.cs",
+      "Hash": "7533C990256FD61A0637D968B37DE895A6E811D92FD7F74EC161CC36878ADB57"
+    }
+  ]
+}

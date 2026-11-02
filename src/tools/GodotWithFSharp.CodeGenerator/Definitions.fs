@@ -2,6 +2,8 @@ namespace GodotWithFSharp.CodeGenerator
 
 open System
 
+type GeneratedFile = { Name: string; Content: string }
+
 /// Portable type information; definitions never retain loaded assemblies or reflection objects.
 type TypeReference =
   | Void

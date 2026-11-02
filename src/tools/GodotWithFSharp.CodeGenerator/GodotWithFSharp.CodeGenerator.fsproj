@@ -11,6 +11,7 @@
     <Compile Include="ExportDefaults.fs" />
     <Compile Include="Analysis.fs" />
     <Compile Include="Metadata.fs" />
+    <Compile Include="Output.fs" />
     <Compile Include="Generator.fs" />
     <Compile Include="Program.fs" />
     <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
