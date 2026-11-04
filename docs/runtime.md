@@ -16,7 +16,7 @@ The generated constructor creates the implementation and exposes it through its 
 | `[<GenerateGodotOverride("_Process")>]` | Override `_Process` and forward to an implementation method such as `Update` |
 | `GenerateGodotNode(..., Tool = true)` | Mark the generated node as a Godot tool script |
 
-Override parameters and return types must exactly match a public virtual method on the Godot base type. Duplicate targets, generic methods, and ref/out parameters are rejected. Generated identifiers use ASCII letters, digits, and `_`; C# keywords are escaped.
+Annotated callbacks must be public instance methods. Their parameters and return types must exactly match a public virtual method on the Godot base type. Duplicate targets, generic methods, and ref/out parameters are rejected. Attributes on unsupported nonpublic members, including inherited private members, produce diagnostics rather than being silently ignored. Generated identifiers use ASCII letters, digits, and `_`; C# keywords are escaped.
 
 ## Export defaults
 

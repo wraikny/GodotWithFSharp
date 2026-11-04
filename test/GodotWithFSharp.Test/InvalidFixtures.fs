@@ -69,6 +69,25 @@ module InvalidFixtures =
     interface IDisposable with
       member _.Dispose() = ()
 
+  type PrivateAnnotatedBase(_node: Node) =
+    interface Impl<Node>
+
+    [<Export; GodotExportDefault(0)>]
+    member val private Hidden = 0 with get, set
+
+    [<GenerateGodotOverride("_Ready")>]
+    member private _.Initialize() = ()
+
+  [<GenerateGodotNode("PrivateMembersNode", typeof<Node>)>]
+  type PrivateMembers(node: Node) =
+    inherit PrivateAnnotatedBase(node)
+
+    [<Export; GodotExportDefault(0)>]
+    member val private Speed = 0 with get, set
+
+    [<GenerateGodotOverride("_Ready")>]
+    member private _.Ready() = ()
+
   [<GenerateGodotNode("CompatibilityNode", typeof<Node>)>]
   type GenericExport<'value>(_node: Node) =
     interface Impl<Node>

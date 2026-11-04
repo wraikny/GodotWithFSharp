@@ -405,6 +405,29 @@ let ``automatic disposal members are validated before any output is written`` ()
   Assert.That(borrowed.[0].Content, Does.Not.Contain("public override void _Notification"))
 
 [<Test>]
+let ``nonpublic attributes including inherited private members are diagnosed`` () =
+  let error =
+    Assert.Throws<GenerationException>(fun () ->
+      Generator.generateTypes "Example" [ typeof<InvalidFixtures.PrivateMembers> ]
+      |> ignore
+    )
+
+  for code, target in
+    [ "GFS010", ".Speed"
+      "GFS010", ".Hidden"
+      "GFS012", ".Ready"
+      "GFS012", ".Initialize" ] do
+    Assert.That(
+      error.Diagnostics
+      |> Array.exists (fun d ->
+        d.Code = code
+        && d.Target.EndsWith(target)
+      ),
+      Is.True,
+      $"Expected {code} for {target}: {error.Message}"
+    )
+
+[<Test>]
 let ``automatic notification checks sealed and abstract base callbacks`` () =
   let references =
     seq {

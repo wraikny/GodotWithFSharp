@@ -46,6 +46,46 @@ module Analysis =
     ||| BindingFlags.NonPublic
     ||| BindingFlags.FlattenHierarchy
 
+  // Reflection omits inherited private members even with NonPublic. Inspect them for
+  // misplaced attributes as well, without duplicating effective public/protected members.
+  let private baseTypes (typ: Type) =
+    typ.BaseType
+    |> Seq.unfold (fun current ->
+      if isNull current then
+        None
+      else
+        Some(current, current.BaseType)
+    )
+
+  let private properties (typ: Type) =
+    Array.append
+      (typ.GetProperties(memberFlags))
+      (baseTypes typ
+       |> Seq.collect (fun parent ->
+         parent.GetProperties(
+           memberFlags
+           ||| BindingFlags.DeclaredOnly
+         )
+       )
+       |> Seq.filter (fun prop ->
+         prop.GetAccessors(true)
+         |> Array.forall _.IsPrivate
+       )
+       |> Seq.toArray)
+
+  let private methods (typ: Type) =
+    Array.append
+      (typ.GetMethods(memberFlags))
+      (baseTypes typ
+       |> Seq.collect (fun parent ->
+         parent.GetMethods(
+           memberFlags
+           ||| BindingFlags.DeclaredOnly
+         )
+       )
+       |> Seq.filter _.IsPrivate
+       |> Seq.toArray)
+
   let private notificationSignature (method: MethodInfo) =
     let parameters = method.GetParameters()
 
@@ -236,9 +276,7 @@ module Analysis =
   let private analyzeExports (typ: Type) (baseType: Type) (memberNames: HashSet<string>) report warn checkName isValid =
     let exports = ResizeArray<ExportDefinition>()
 
-    for prop in
-      typ.GetProperties()
-      |> Array.sortBy _.Name do
+    for prop in properties typ |> Array.sortBy _.Name do
       match attribute "Godot.ExportAttribute" prop with
       | None -> ()
       | Some export ->
@@ -314,7 +352,7 @@ module Analysis =
     let signatures = HashSet<string>()
 
     for method in
-      typ.GetMethods()
+      methods typ
       |> Array.sortBy (fun m -> m.ToString()) do
       match attribute "GodotWithFSharp.GenerateGodotOverride" method with
       | None -> ()
@@ -336,7 +374,8 @@ module Analysis =
           |> Array.map _.ParameterType
 
         if
-          method.IsStatic
+          not method.IsPublic
+          || method.IsStatic
           || method.IsGenericMethod
           || (ps
               |> Array.exists (fun p ->
@@ -347,7 +386,10 @@ module Analysis =
           || method.ReturnType.IsByRef
           || method.ReturnType.IsPointer
         then
-          report "GFS012" ("." + method.Name) "Unsupported override signature."
+          report
+            "GFS012"
+            ("." + method.Name)
+            "Override implementations must be public instance methods with supported signatures."
 
         let matched =
           if isNull baseType then
