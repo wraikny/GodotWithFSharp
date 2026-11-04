@@ -14,6 +14,76 @@ module Analysis =
 
   let private argument index (attr: CustomAttributeData) = attr.ConstructorArguments.[index].Value
 
+  let private accessibleMethod (method: MethodBase) =
+    not (isNull method)
+    && (method.IsPublic
+        || method.IsFamily
+        || method.IsFamilyOrAssembly)
+
+  let private accessibleMember (candidate: MemberInfo) =
+    match candidate with
+    | :? MethodBase as method -> accessibleMethod method
+    | :? FieldInfo as field ->
+      field.IsPublic
+      || field.IsFamily
+      || field.IsFamilyOrAssembly
+    | :? PropertyInfo as prop ->
+      prop.GetAccessors(true)
+      |> Array.exists (fun method -> accessibleMethod method)
+    | :? EventInfo as event ->
+      [| event.AddMethod; event.RemoveMethod; event.RaiseMethod |]
+      |> Array.exists (fun method -> accessibleMethod method)
+    | :? Type as typ ->
+      typ.IsNestedPublic
+      || typ.IsNestedFamily
+      || typ.IsNestedFamORAssem
+    | _ -> false
+
+  let private memberFlags =
+    BindingFlags.Instance
+    ||| BindingFlags.Static
+    ||| BindingFlags.Public
+    ||| BindingFlags.NonPublic
+    ||| BindingFlags.FlattenHierarchy
+
+  let private notificationSignature (method: MethodInfo) =
+    let parameters = method.GetParameters()
+
+    method.Name = "_Notification"
+    && not method.IsGenericMethod
+    && method.ReturnType.FullName = "System.Void"
+    && parameters.Length = 1
+    && parameters.[0].ParameterType.FullName = "System.Int32"
+
+  let private validateAutomaticMembers name (baseType: Type) autoDispose (memberNames: HashSet<string>) report =
+    if autoDispose then
+      if memberNames.Contains "_Notification" then
+        report
+          "GFS015"
+          ""
+          "Automatic disposal callback '_Notification' conflicts with a generated class or property name."
+
+      if name = "_godotImplementationDisposed" then
+        report
+          "GFS015"
+          ""
+          "Automatic disposal field '_godotImplementationDisposed' conflicts with the generated class name."
+
+      if not (isNull baseType) then
+        let overridable =
+          baseType.GetMethods(
+            BindingFlags.Instance
+            ||| BindingFlags.Public
+          )
+          |> Array.exists (fun method ->
+            notificationSignature method
+            && method.IsVirtual
+            && not method.IsFinal
+          )
+
+        if not overridable then
+          report "GFS017" "" "Automatic disposal requires an overridable public _Notification(int) method."
+
   let rec internal inherits name (typ: Type) =
     not (isNull typ)
     && (typ.FullName = name
@@ -163,7 +233,7 @@ module Analysis =
       then
         report "GFS008" "" "The base node needs an accessible parameterless constructor."
 
-  let private analyzeExports (typ: Type) (memberNames: HashSet<string>) report checkName isValid =
+  let private analyzeExports (typ: Type) (baseType: Type) (memberNames: HashSet<string>) report warn checkName isValid =
     let exports = ResizeArray<ExportDefinition>()
 
     for prop in
@@ -205,6 +275,16 @@ module Analysis =
           report "GFS015" ("." + prop.Name) $"Generated backing field '{fieldName}' conflicts with another member."
 
         if isValid () then
+          if not (isNull baseType) then
+            baseType.GetMember(prop.Name, memberFlags)
+            |> Array.tryFind accessibleMember
+            |> Option.iter (fun inherited ->
+              warn
+                "GFS018"
+                ("." + prop.Name)
+                $"Export hides inherited member '{inherited.DeclaringType.FullName}.{inherited.Name}'. Rename the exported property to avoid hiding a base member."
+            )
+
           let hint =
             if export.ConstructorArguments.Count > 0 then
               Convert.ToInt32(argument 0 export)
@@ -323,7 +403,7 @@ module Analysis =
 
     overrides.ToArray()
 
-  let private validateAbstractMembers (baseType: Type) (overrides: OverrideDefinition array) report =
+  let private validateAbstractMembers (baseType: Type) autoDispose (overrides: OverrideDefinition array) report =
     if not (isNull baseType) then
       for required in
         baseType.GetMethods(
@@ -334,19 +414,23 @@ module Analysis =
         |> Array.filter _.IsAbstract do
         if
           not (
-            overrides
-            |> Seq.exists (fun m ->
-              m.Name = required.Name
-              && m.Parameters = (required.GetParameters()
-                                 |> Array.map (fun p -> TypeReference.ofType p.ParameterType))
-            )
+            (autoDispose
+             && notificationSignature required)
+            || (overrides
+                |> Seq.exists (fun m ->
+                  m.Name = required.Name
+                  && m.Parameters = (required.GetParameters()
+                                     |> Array.map (fun p -> TypeReference.ofType p.ParameterType))
+                ))
           )
         then
           report "GFS016" "" $"Abstract base member must be implemented: {required.Name}."
 
-  /// Discovers and validates a whole batch before any ASTs or files are produced.
-  let analyzeTypes (types: seq<Type>) =
+  /// Validates a whole batch and returns nonfatal Export hiding warnings alongside portable definitions.
+  /// Invalid batches raise GenerationException and cannot produce output.
+  let analyzeTypesWithWarnings (types: seq<Type>) : AnalysisResult =
     let diagnostics = ResizeArray<GenerationDiagnostic>()
+    let warnings = ResizeArray<GenerationDiagnostic>()
     let nodes = ResizeArray<NodeDefinition>()
     let names = HashSet<string>(StringComparer.OrdinalIgnoreCase)
 
@@ -356,8 +440,30 @@ module Analysis =
       | Some attr ->
         let count = diagnostics.Count
 
+        let flag name fallback =
+          attr.NamedArguments
+          |> Seq.tryFind (fun value -> value.MemberName = name)
+          |> Option.map (fun value -> value.TypedValue.Value :?> bool)
+          |> Option.defaultValue fallback
+
+        let disposeImplementation = flag "DisposeImplementation" true
+
+        let implementsDisposable =
+          typ.GetInterfaces()
+          |> Array.exists (fun contract -> contract.FullName = "System.IDisposable")
+
+        let autoDispose =
+          disposeImplementation
+          && implementsDisposable
+
         let report code target message =
           diagnostics.Add
+            { Code = code
+              Target = typ.FullName + target
+              Message = message }
+
+        let warn code target message =
+          warnings.Add
             { Code = code
               Target = typ.FullName + target
               Message = message }
@@ -389,17 +495,12 @@ module Analysis =
 
 
         let isValid () = diagnostics.Count = count
-        let exports = analyzeExports typ memberNames report checkName isValid
+        let exports = analyzeExports typ baseType memberNames report warn checkName isValid
+        validateAutomaticMembers name baseType autoDispose memberNames report
         let overrides = analyzeOverrides typ baseType memberNames report checkName isValid
-        validateAbstractMembers baseType overrides report
+        validateAbstractMembers baseType autoDispose overrides report
 
         if diagnostics.Count = count then
-          let flag name fallback =
-            attr.NamedArguments
-            |> Seq.tryFind (fun value -> value.MemberName = name)
-            |> Option.map (fun value -> value.TypedValue.Value :?> bool)
-            |> Option.defaultValue fallback
-
           nodes.Add
             { Name = name
               Implementation = TypeReference.ofType typ
@@ -407,12 +508,14 @@ module Analysis =
               Exports = exports
               Overrides = overrides
               Tool = flag "Tool" false
-              DisposeImplementation = flag "DisposeImplementation" true
-              ImplementsDisposable =
-                typ.GetInterfaces()
-                |> Array.exists (fun contract -> contract.FullName = "System.IDisposable") }
+              DisposeImplementation = disposeImplementation
+              ImplementsDisposable = implementsDisposable }
 
     if diagnostics.Count > 0 then
       raise (GenerationException(diagnostics.ToArray()))
 
-    nodes.ToArray()
+    { Nodes = nodes.ToArray()
+      Warnings = warnings.ToArray() }
+
+  /// Returns validated definitions only. Use analyzeTypesWithWarnings to inspect nonfatal diagnostics.
+  let analyzeTypes (types: seq<Type>) = (analyzeTypesWithWarnings types).Nodes

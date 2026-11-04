@@ -68,8 +68,12 @@ let run (args: string[]) =
         if not (File.Exists path) then
           raise (FileNotFoundException("Implementation assembly not found. Build it first.", path))
 
-      let definitions = Metadata.read paths references
-      let files = Generator.generateDefinitions ns definitions
+      let analysis = Metadata.readWithWarnings paths references
+
+      for warning in analysis.Warnings do
+        eprintfn "warning %s: %s: %s" warning.Code warning.Target warning.Message
+
+      let files = Generator.generateDefinitions ns analysis.Nodes
 
       options <-
         { options with

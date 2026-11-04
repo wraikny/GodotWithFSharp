@@ -5,6 +5,70 @@ open Godot
 open GodotWithFSharp
 
 module InvalidFixtures =
+  type ExportWarningBase() =
+    inherit Node()
+    member val private Secret = 0 with get, set
+
+  [<GenerateGodotNode("ShadowingExportsNode", typeof<ExportWarningBase>)>]
+  type ShadowingExports(_node: ExportWarningBase) =
+    interface Impl<ExportWarningBase>
+
+    [<Export; GodotExportDefault(0)>]
+    member val _Notification = 0 with get, set
+
+    [<Export; GodotExportDefault("")>]
+    member val Name = "" with get, set
+
+    [<Export; GodotExportDefault(0)>]
+    member val NotificationPredelete = 0 with get, set
+
+    [<Export; GodotExportDefault(0)>]
+    member val TreeEntered = 0 with get, set
+
+    [<Export; GodotExportDefault(0)>]
+    member val Secret = 0 with get, set
+
+  [<GenerateGodotNode("BorrowedShadowingNode", typeof<Node>, DisposeImplementation = false)>]
+  type BorrowedShadowing(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()
+
+    [<Export; GodotExportDefault(0)>]
+    member val _Notification = 0 with get, set
+
+  [<GenerateGodotNode("_Notification", typeof<Node>)>]
+  type AutomaticClassCollision(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()
+
+  [<GenerateGodotNode("AutomaticPropertyCollisionNode", typeof<Node>)>]
+  type AutomaticPropertyCollision(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()
+
+    [<Export; GodotExportDefault(0)>]
+    member val _Notification = 0 with get, set
+
+  [<GenerateGodotNode("_godotImplementationDisposed", typeof<Node>)>]
+  type AutomaticFieldCollision(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()
+
+  [<GenerateGodotNode("_Notification", typeof<Node>, DisposeImplementation = false)>]
+  type BorrowedNotificationName(_node: Node) =
+    interface Impl<Node>
+
+    interface IDisposable with
+      member _.Dispose() = ()
+
   [<GenerateGodotNode("CompatibilityNode", typeof<Node>)>]
   type GenericExport<'value>(_node: Node) =
     interface Impl<Node>

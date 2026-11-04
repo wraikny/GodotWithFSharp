@@ -22,6 +22,8 @@ Override parameters and return types must exactly match a public virtual method 
 
 An exported F# property needs public instance getters and setters, a supported Godot Variant type, and exactly one default declaration.
 
+An Export that hides an accessible inherited member produces warning `GFS018`. For example, an exported `_Notification` property hides Godot's notification method even when the implementation does not implement `IDisposable`. Generation continues, but renaming the property avoids the hiding. A collision with a member generated in the same class, such as the automatic disposal callback, remains a fatal `GFS015` diagnostic.
+
 ```fsharp
 [<Export(PropertyHint.Range, "0,600,1")>]
 [<GodotExportDefault(180.0f)>]
@@ -61,6 +63,8 @@ Each node creates its implementation once in its constructor. Entering and leavi
 If the implementation implements `IDisposable`, the node owns its final disposal by default. The generated predelete notification calls `Dispose` once, after the implementation's own notification callback, using `finally` for cleanup. Leaving the tree does not dispose the implementation.
 
 Set `GenerateGodotNode(..., DisposeImplementation = false)` to opt out of automatic disposal. An implementation's `Dispose` must not free its owning node again.
+
+Automatic disposal requires an overridable public `_Notification(int)` on the base node. The generated notification callback and disposal field are included in name-collision validation; a sealed notification override or a conflicting class/property name fails before files are written.
 
 ## Find implementations and instantiate scenes
 

@@ -44,6 +44,8 @@ public class IsolatedImpl : Impl<Node> {
     public IsolatedImpl(Node node) { throw new Exception("Constructor must not execute during generation."); }
     [Export, GodotExportDefaultProvider(typeof(Defaults), "Value")]
     public float Speed { get; set; }
+    [Export, GodotExportDefault(0)]
+    public int _Notification { get; set; }
 }
 """
 
@@ -93,6 +95,7 @@ public class IsolatedImpl : Impl<Node> {
 
     let code, message = Processes.run 60000 root "dotnet" (arguments @ dependencies)
     Assert.That(code, Is.Zero, message)
+    Assert.That(message, Does.Contain("warning GFS018:").And.Contain("IsolatedImpl._Notification"))
     let file = Path.Combine(output, "IsolatedNode.cs")
     Assert.That(File.ReadAllText file, Does.Contain("global::Defaults.Value"))
 
@@ -114,6 +117,7 @@ public class IsolatedImpl : Impl<Node> {
          @ [ "--dry-run" ])
 
     Assert.That(code, Is.Zero, message)
+    Assert.That(message, Does.Contain("warning GFS018:"))
     Assert.That(File.GetLastWriteTimeUtc file, Is.EqualTo modified)
     Assert.That(File.Exists sentinel, Is.False)
   finally

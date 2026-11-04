@@ -338,6 +338,174 @@ let ``reports all node collisions before rendering a batch`` () =
   )
 
 [<Test>]
+let ``exports hiding accessible base members warn without preventing generation`` () =
+  let analysis =
+    Analysis.analyzeTypesWithWarnings [ typeof<InvalidFixtures.ShadowingExports> ]
+
+  Assert.That(analysis.Nodes.Length, Is.EqualTo(1))
+  Assert.That(analysis.Warnings.Length, Is.EqualTo(4))
+
+  for name in [ "_Notification"; "Name"; "NotificationPredelete"; "TreeEntered" ] do
+    Assert.That(
+      analysis.Warnings
+      |> Array.exists (fun warning ->
+        warning.Code = "GFS018"
+        && warning.Target.EndsWith("." + name)
+        && warning.Message.Contains("Rename")
+      ),
+      Is.True
+    )
+
+  Assert.That(
+    analysis.Warnings
+    |> Array.exists (fun warning -> warning.Target.EndsWith(".Secret")),
+    Is.False,
+    "An inaccessible private base member is not a hiding warning."
+  )
+
+  let files = Generator.generateDefinitions "Example" analysis.Nodes
+  Assert.That(files.[0].Content, Does.Contain("private global::System.Int32 _Notification"))
+  Assert.That(files.[0].Content, Does.Not.Contain("public override void _Notification"))
+
+  let borrowed =
+    Analysis.analyzeTypesWithWarnings [ typeof<InvalidFixtures.BorrowedShadowing> ]
+
+  Assert.That(borrowed.Nodes.Length, Is.EqualTo(1))
+  Assert.That(borrowed.Warnings.Length, Is.EqualTo(1))
+  Assert.That(borrowed.Warnings.[0].Code, Is.EqualTo("GFS018"))
+
+  let ordinary = Analysis.analyzeTypesWithWarnings [ typeof<ExampleImpl> ]
+  Assert.That(ordinary.Warnings, Is.Empty)
+
+[<Test>]
+let ``automatic disposal members are validated before any output is written`` () =
+  withDirectory (fun directory ->
+    for typ in
+      [ typeof<InvalidFixtures.AutomaticClassCollision>
+        typeof<InvalidFixtures.AutomaticPropertyCollision>
+        typeof<InvalidFixtures.AutomaticFieldCollision> ] do
+      let error =
+        Assert.Throws<GenerationException>(fun () ->
+          Generator.generateTypes "Example" [ typ ]
+          |> Generator.writeFiles directory
+        )
+
+      Assert.That(
+        error.Diagnostics
+        |> Array.exists (fun d -> d.Code = "GFS015"),
+        Is.True
+      )
+
+    Assert.That(Directory.GetFiles directory, Is.Empty)
+  )
+
+  let borrowed =
+    Generator.generateTypes "Example" [ typeof<InvalidFixtures.BorrowedNotificationName> ]
+
+  Assert.That(borrowed.[0].Content, Does.Not.Contain("public override void _Notification"))
+
+[<Test>]
+let ``automatic notification checks sealed and abstract base callbacks`` () =
+  let references =
+    seq {
+      yield!
+        (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") :?> string)
+          .Split(Path.PathSeparator)
+
+      yield typeof<Godot.Node>.Assembly.Location
+      yield typeof<Impl>.Assembly.Location
+      yield typeof<unit>.Assembly.Location
+    }
+    |> Seq.distinct
+    |> Seq.map (fun path -> MetadataReference.CreateFromFile(path) :> MetadataReference)
+    |> Seq.toArray
+
+  let source =
+    CSharpSyntaxTree.ParseText(
+      """
+using System;
+using Godot;
+using GodotWithFSharp;
+namespace NotificationInputs {
+  public class FinalNode : Node { public sealed override void _Notification(int what) { } }
+  [GenerateGodotNode("FinalGenerated", typeof(FinalNode))]
+  public class FinalImpl : Impl<FinalNode>, IDisposable {
+    public FinalImpl(FinalNode node) { }
+    public void Dispose() { }
+  }
+  public abstract class AbstractNode : Node { public abstract override void _Notification(int what); }
+  [GenerateGodotNode("AbstractGenerated", typeof(AbstractNode))]
+  public class AbstractImpl : Impl<AbstractNode>, IDisposable {
+    public AbstractImpl(AbstractNode node) { }
+    public void Dispose() { }
+  }
+  public abstract class GenericAbstractNode : Node { public abstract void _Notification<T>(int what); }
+  [GenerateGodotNode("GenericAbstractGenerated", typeof(GenericAbstractNode))]
+  public class GenericAbstractImpl : Impl<GenericAbstractNode>, IDisposable {
+    public GenericAbstractImpl(GenericAbstractNode node) { }
+    public void Dispose() { }
+  }
+}
+"""
+    )
+
+  let input =
+    CSharpCompilation.Create(
+      "NotificationInputs"
+      + Guid.NewGuid().ToString("N"),
+      [| source |],
+      references,
+      CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+    )
+
+  use image = new MemoryStream()
+  let emitted = input.Emit(image)
+  Assert.That(emitted.Success, Is.True, String.Join("\n", emitted.Diagnostics))
+  let bytes = image.ToArray()
+  let assembly = Reflection.Assembly.Load(bytes)
+
+  let error =
+    Assert.Throws<GenerationException>(fun () ->
+      Generator.generateTypes "Example" [ assembly.GetType("NotificationInputs.FinalImpl", true) ]
+      |> ignore
+    )
+
+  Assert.That(
+    error.Diagnostics
+    |> Array.exists (fun d -> d.Code = "GFS017"),
+    Is.True
+  )
+
+  let genericError =
+    Assert.Throws<GenerationException>(fun () ->
+      Generator.generateTypes "Example" [ assembly.GetType("NotificationInputs.GenericAbstractImpl", true) ]
+      |> ignore
+    )
+
+  Assert.That(
+    genericError.Diagnostics
+    |> Array.exists (fun d -> d.Code = "GFS016"),
+    Is.True
+  )
+
+  let generated =
+    Generator.generateTypes "Example" [ assembly.GetType("NotificationInputs.AbstractImpl", true) ]
+
+  let compilation =
+    CSharpCompilation.Create(
+      "GeneratedNotification",
+      [| CSharpSyntaxTree.ParseText(generated.[0].Content) |],
+      Array.append references [| MetadataReference.CreateFromImage(bytes) :> MetadataReference |],
+      CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+    )
+
+  Assert.That(
+    compilation.GetDiagnostics()
+    |> Seq.filter (fun d -> d.Severity = DiagnosticSeverity.Error),
+    Is.Empty
+  )
+
+[<Test>]
 let ``metadata definitions remain usable after inspection context is disposed`` () =
   let definitions = Metadata.read [ typeof<ExampleImpl>.Assembly.Location ] []
   let actual = Generator.generateDefinitions "Example.Generated" definitions

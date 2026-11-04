@@ -8,6 +8,7 @@
     <Compile Include="Processes.fs" />
     <Compile Include="BuildConfigurationTests.fs" />
     <Compile Include="BuildIntegrationTests.fs" />
+    <Compile Include="BuildWarningTests.fs" />
     <Compile Include="CliIntegrationTests.fs" />
     <Compile Include="GodotIntegrationTests.fs" />
     <Compile Include="InvalidFixtures.fs" />

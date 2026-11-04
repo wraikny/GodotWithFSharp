@@ -45,6 +45,21 @@ The main targets file imports the default settings and version checks as needed.
 
 The [Generate MSBuild task](../src/tools/GodotWithFSharp.Build/Generate.cs) starts the CLI as a separate process with an argument list, captures UTF-8 output, and handles failures and timeouts. The [generator](../src/tools/GodotWithFSharp.CodeGenerator/) performs metadata analysis and C# generation.
 
+## Generation warnings
+
+`GFS018` warns when an exported property hides an accessible inherited method, property, field, event, or nested type. Inaccessible private base members do not produce this warning. This is independent of whether automatic implementation disposal is enabled.
+
+The CLI prints warnings to standard error using `warning GFS018: <implementation.member>: <message>` and exits successfully if generation otherwise succeeds. It also reports warnings during `--dry-run`. The MSBuild integration forwards these as native build warnings, so they remain visible even when the C# hiding warning `CS0108` is suppressed. Fatal validation errors still stop generation before output.
+
+When embedding the generator, use `Analysis.analyzeTypesWithWarnings` or `Metadata.readWithWarnings`. They return an `AnalysisResult` containing portable `Nodes` and `Warnings`; definition validation errors still raise `GenerationException`. The existing `analyzeTypes` and `read` helpers preserve their definitions-only return values.
+
+```fsharp
+let analysis = Metadata.readWithWarnings implementationPaths referencePaths
+for warning in analysis.Warnings do
+  printfn "%s %s: %s" warning.Code warning.Target warning.Message
+let files = Generator.generateDefinitions generatedNamespace analysis.Nodes
+```
+
 ## Configuration and compatibility
 
 The supported baseline is .NET 8 / SDK 8.0.100 and Godot 4.6.2 .NET edition. Match the engine, GodotSharp, and Godot.NET.Sdk versions. The MSBuild checks compare the SDK's GodotSharp and source-generator package versions with `GodotVersion`; mismatches report `GFS200` or `GFS201`.

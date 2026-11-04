@@ -127,6 +127,12 @@ type GenerationDiagnostic =
     Target: string
     Message: string }
 
+/// Validated definitions and nonfatal diagnostics, detached from reflection contexts.
+/// Invalid definitions still raise GenerationException rather than returning partial nodes.
+type AnalysisResult =
+  { Nodes: NodeDefinition array
+    Warnings: GenerationDiagnostic array }
+
 type GenerationException(diagnostics: GenerationDiagnostic array) =
   inherit
     ArgumentException(

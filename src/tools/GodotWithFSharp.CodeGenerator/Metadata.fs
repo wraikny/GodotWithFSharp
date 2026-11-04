@@ -65,7 +65,7 @@ module Metadata =
         |> Array.distinct
 
   /// Resolve inputs and explicit references first, then their restored dependencies and framework files.
-  let read (assemblyPaths: string seq) (referencePaths: string seq) =
+  let readWithWarnings (assemblyPaths: string seq) (referencePaths: string seq) : AnalysisResult =
     let inputs =
       assemblyPaths
       |> Seq.map Path.GetFullPath
@@ -144,7 +144,7 @@ module Metadata =
         inputs
         |> Seq.collect (fun path -> context.LoadFromAssemblyPath(path).ExportedTypes)
 
-      Analysis.analyzeTypes types
+      Analysis.analyzeTypesWithWarnings types
     with
     | :? GenerationException -> reraise ()
     | error ->
@@ -155,3 +155,7 @@ module Metadata =
                Message =
                  $"Cannot inspect implementation metadata: {error.Message} Use --reference for dependencies that are not in the build output or NuGet cache." } |]
       )
+
+  /// Returns validated definitions only. Use readWithWarnings to inspect nonfatal diagnostics.
+  let read (assemblyPaths: string seq) (referencePaths: string seq) =
+    (readWithWarnings assemblyPaths referencePaths).Nodes

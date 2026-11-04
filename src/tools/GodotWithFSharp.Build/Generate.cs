@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using Microsoft.Build.Framework;
 
@@ -25,6 +26,26 @@ namespace GodotWithFSharp.Build
 
         private void Message(string message) =>
             BuildEngine.LogMessageEvent(new BuildMessageEventArgs(message, null, "GodotWithFSharp", MessageImportance.High));
+
+        private string LogWarnings(string text)
+        {
+            var remaining = new StringBuilder();
+            foreach (var rawLine in text.Split('\n'))
+            {
+                var line = rawLine.TrimEnd('\r');
+                var warning = Regex.Match(line, @"^warning (GFS[0-9]+): (.*)$", RegexOptions.CultureInvariant);
+                if (warning.Success)
+                {
+                    BuildEngine.LogWarningEvent(new BuildWarningEventArgs(null, warning.Groups[1].Value, null,
+                        0, 0, 0, 0, warning.Groups[2].Value, null, "GodotWithFSharp"));
+                }
+                else
+                {
+                    remaining.AppendLine(line);
+                }
+            }
+            return remaining.ToString().TrimEnd();
+        }
 
         public bool Execute()
         {
@@ -65,7 +86,7 @@ namespace GodotWithFSharp.Build
                     return false;
                 }
                 Message(output.GetAwaiter().GetResult());
-                var error = errors.GetAwaiter().GetResult();
+                var error = LogWarnings(errors.GetAwaiter().GetResult());
                 if (process.ExitCode != 0)
                 {
                     Error("GFS203", "Code generation failed: " + error);
