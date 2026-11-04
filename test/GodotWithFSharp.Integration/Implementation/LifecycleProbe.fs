@@ -11,6 +11,9 @@ type private Counters() =
 type ExportDefaults =
   static member Offset = Vector2(12.0f, 34.0f)
 
+type SignedExport =
+  | MinusOne = -1
+
 [<GenerateGodotNode("LifecycleProbe", typeof<Node>, Tool = true)>]
 type LifecycleProbeImpl(_node: Node) =
   let mutable enters = 0
@@ -21,6 +24,15 @@ type LifecycleProbeImpl(_node: Node) =
 
   [<Export; GodotExportDefaultProvider(typeof<ExportDefaults>, "Offset")>]
   member val Offset = Vector2.Zero with get, set
+
+  [<Export; GodotExportDefault(-12.5f)>]
+  member val NegativeSpeed = 0.0f with get, set
+
+  [<Export; GodotExportDefault(SignedExport.MinusOne)>]
+  member val NegativeMode = Unchecked.defaultof<SignedExport> with get, set
+
+  [<Export; GodotExportDefault(-0.0)>]
+  member val NegativeZero = 0.0 with get, set
 
   [<Export; GodotExportDefault(0)>]
   member _.EnterCount

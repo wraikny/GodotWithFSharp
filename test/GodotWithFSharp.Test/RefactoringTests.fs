@@ -126,6 +126,15 @@ let literalCases () =
     "System.UInt32", DefaultConstant.UInt32(UInt32.MaxValue), box (UInt32.MaxValue)
     "System.Int64", DefaultConstant.Int64(Int64.MinValue), box (Int64.MinValue)
     "System.UInt64", DefaultConstant.UInt64(UInt64.MaxValue), box (UInt64.MaxValue)
+    "System.Int32", DefaultConstant.Int32(-1), box (-1)
+    "System.Single", DefaultConstant.Single(-1.25f), box (-1.25f)
+    "System.Single", DefaultConstant.Single(0.0f), box (0.0f)
+    "System.Single", DefaultConstant.Single(-0.0f), box (-0.0f)
+    "System.Double", DefaultConstant.Double(-2.5), box (-2.5)
+    "System.Double", DefaultConstant.Double(0.0), box (0.0)
+    "System.Double", DefaultConstant.Double(-0.0), box (-0.0)
+    "Example.Signed", DefaultConstant.Int64(-1L), box (-1L)
+    "Example.Signed", DefaultConstant.Int64(Int64.MinValue), box (Int64.MinValue)
     "System.Single", DefaultConstant.Single(Single.MinValue), box (Single.MinValue)
     "System.Single", DefaultConstant.Single(Single.NaN), box (Single.NaN)
     "System.Single", DefaultConstant.Single(Single.PositiveInfinity), box (Single.PositiveInfinity)
@@ -134,28 +143,7 @@ let literalCases () =
     "System.Double", DefaultConstant.Double(Double.NaN), box (Double.NaN)
     "System.Double", DefaultConstant.Double(Double.PositiveInfinity), box (Double.PositiveInfinity)
     "System.Double", DefaultConstant.Double(Double.NegativeInfinity), box (Double.NegativeInfinity) ]
-  |> List.map (fun (name, constant, value) ->
-    let test = TestCaseData(name, constant, value)
-
-    let knownNegativeCastIssue =
-      match constant with
-      | DefaultConstant.SByte value -> value < 0y
-      | DefaultConstant.Int16 value -> value < 0s
-      | DefaultConstant.Int32 value -> value < 0
-      | DefaultConstant.Int64 value -> value < 0L
-      | DefaultConstant.Single value ->
-        value < 0.0f
-        && not (Single.IsInfinity value)
-      | DefaultConstant.Double value ->
-        value < 0.0
-        && not (Double.IsInfinity value)
-      | _ -> false
-
-    if knownNegativeCastIssue then
-      test.Explicit("Existing negative literal cast bug; see docs/review-follow-ups.md. Run explicitly to reproduce.")
-    else
-      test
-  )
+  |> List.map (fun (name, constant, value) -> TestCaseData(name, constant, value))
 
 [<TestCaseSource(nameof literalCases)>]
 let ``portable defaults compile to the original CLR constant`` (name: string) (constant: DefaultConstant) (value: obj) =
@@ -184,6 +172,7 @@ let ``portable defaults compile to the original CLR constant`` (name: string) (c
 namespace Godot {{ public class Node {{ }} public enum PropertyHint {{ None }}
 public class ExportAttribute : System.Attribute {{ public ExportAttribute(PropertyHint hint, string value) {{ }} }} }}
 namespace GodotWithFSharp {{ public interface RuntimeObject<TNode, TImpl> {{ }} }}
+namespace Example {{ public enum Signed : long {{ Negative = -1, Minimum = long.MinValue }} }}
 namespace Example {{ public class Implementation {{ public Implementation(Godot.Node node) {{ }} public {name} Value {{ get; set; }} }} }}
 """
     )
@@ -214,6 +203,13 @@ namespace Example {{ public class Implementation {{ public Implementation(Godot.
   let actual = compilation.GetSemanticModel(tree, false).GetConstantValue(initializer)
   Assert.That(actual.HasValue, Is.True)
   Assert.That(actual.Value, Is.EqualTo(value))
+
+  match value, actual.Value with
+  | (:? float32 as expected), (:? float32 as actual) ->
+    Assert.That(BitConverter.SingleToInt32Bits(actual), Is.EqualTo(BitConverter.SingleToInt32Bits(expected)))
+  | (:? double as expected), (:? double as actual) ->
+    Assert.That(BitConverter.DoubleToInt64Bits(actual), Is.EqualTo(BitConverter.DoubleToInt64Bits(expected)))
+  | _ -> ()
 
 [<Test>]
 let ``ownership preflight rejects conflicts without creating a lock`` () =

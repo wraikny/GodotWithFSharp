@@ -12,6 +12,9 @@ namespace Integration.Generated
             Impl.DisposedCount = _godotExport_DisposedCount;
             Impl.EnterCount = _godotExport_EnterCount;
             Impl.ExitCount = _godotExport_ExitCount;
+            Impl.NegativeMode = _godotExport_NegativeMode;
+            Impl.NegativeSpeed = _godotExport_NegativeSpeed;
+            Impl.NegativeZero = _godotExport_NegativeZero;
             Impl.Offset = _godotExport_Offset;
             Impl.OrderValid = _godotExport_OrderValid;
             Impl.ReadyCount = _godotExport_ReadyCount;
@@ -65,6 +68,57 @@ namespace Integration.Generated
             {
                 Impl.ExitCount = value;
                 _godotExport_ExitCount = value;
+            }
+        }
+
+        private global::Integration.Implementation.SignedExport _godotExport_NegativeMode = (global::Integration.Implementation.SignedExport)(-1);
+        [global::Godot.ExportAttribute((global::Godot.PropertyHint)0, "")]
+        private global::Integration.Implementation.SignedExport NegativeMode
+        {
+            get
+            {
+                _godotExport_NegativeMode = Impl.NegativeMode;
+                return _godotExport_NegativeMode;
+            }
+
+            set
+            {
+                Impl.NegativeMode = value;
+                _godotExport_NegativeMode = value;
+            }
+        }
+
+        private global::System.Single _godotExport_NegativeSpeed = (global::System.Single)(-12.5F);
+        [global::Godot.ExportAttribute((global::Godot.PropertyHint)0, "")]
+        private global::System.Single NegativeSpeed
+        {
+            get
+            {
+                _godotExport_NegativeSpeed = Impl.NegativeSpeed;
+                return _godotExport_NegativeSpeed;
+            }
+
+            set
+            {
+                Impl.NegativeSpeed = value;
+                _godotExport_NegativeSpeed = value;
+            }
+        }
+
+        private global::System.Double _godotExport_NegativeZero = (global::System.Double)(-0.0D);
+        [global::Godot.ExportAttribute((global::Godot.PropertyHint)0, "")]
+        private global::System.Double NegativeZero
+        {
+            get
+            {
+                _godotExport_NegativeZero = Impl.NegativeZero;
+                return _godotExport_NegativeZero;
+            }
+
+            set
+            {
+                Impl.NegativeZero = value;
+                _godotExport_NegativeZero = value;
             }
         }
 

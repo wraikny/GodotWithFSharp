@@ -103,7 +103,14 @@ module internal CSharpSyntax =
 
   let constant (value: DefaultConstant) : ExpressionSyntax =
     let numeric token =
-      SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, token) :> ExpressionSyntax
+      let literal =
+        SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, token)
+
+      // A cast followed by a signed literal is ambiguous after the AST is rendered and parsed.
+      if token.Text.StartsWith("-", StringComparison.Ordinal) then
+        SyntaxFactory.ParenthesizedExpression(literal) :> ExpressionSyntax
+      else
+        literal :> ExpressionSyntax
 
     match value with
     | DefaultConstant.Null -> SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression) :> ExpressionSyntax
@@ -142,6 +149,9 @@ module internal CSharpSyntax =
          else "NegativeInfinity")
       :> ExpressionSyntax
     | DefaultConstant.Single value -> numeric (SyntaxFactory.Literal(value))
+    | DefaultConstant.Double value when BitConverter.DoubleToInt64Bits(value) = Int64.MinValue ->
+      // Without a floating-point suffix, -0 is parsed as an integer and loses its sign before the cast.
+      numeric (SyntaxFactory.Literal("-0.0D", value))
     | DefaultConstant.Double value -> numeric (SyntaxFactory.Literal(value))
     | DefaultConstant.UInt64 value -> numeric (SyntaxFactory.Literal(value))
     | DefaultConstant.Int64 value -> numeric (SyntaxFactory.Literal(value))

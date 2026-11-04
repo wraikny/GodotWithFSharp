@@ -50,6 +50,10 @@ With `GODOT_BIN` unset, only the engine test is skipped. An invalid path or inco
 
 Engine checks cover headless editor import, simple and Vector2 defaults, scene overrides, example movement/reset, tree reentry, RequestReady, final disposal, and implementation lookup. They require successful exit codes and success markers, and reject engine errors or timeouts.
 
+## Default-value regression coverage
+
+The ordinary suite compiles generated C# and checks negative numeric constants, negative enum values, and finite fractional defaults. Floating-point assertions compare the IEEE bits as well as numeric equality, including positive and negative zero for both `float32` and `double`. These cases run without NUnit `Explicit` exclusions.
+
 ## Verify the CLI package
 
 ```shell
