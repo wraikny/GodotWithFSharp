@@ -6,7 +6,7 @@ Use `open GodotWithFSharp` to access the attributes, runtime contracts, and exte
 
 ## Nodes and callbacks
 
-`[<GenerateGodotNode("PlayerNode", typeof<Node2D>)>]` declares a generated public partial C# node. The implementation must be a public, non-abstract, non-generic type with a public constructor accepting the declared Godot base type, and implement `Impl<Node2D>` for that same type.
+`[<GenerateGodotNode("PlayerNode", typeof<Node2D>)>]` declares a generated public partial C# node. The implementation must be a public, concrete, closed type (no unbound type parameters) with a public constructor accepting the declared Godot base type, and implement `Impl<Node2D>` for that same type.
 
 The generated constructor creates the implementation and exposes it through its `Impl` property. Generated nodes implement `RuntimeObject<Node2D, PlayerImpl>`, which also provides the single-parameter `RuntimeObject<PlayerImpl>` contract.
 
@@ -89,6 +89,8 @@ let optionalImplementation = root.TryGetRuntimeImpl<Node2D, PlayerImpl>("Player"
 | `scene.InstantiateWithImpl<NodeType, Implementation>()` | A new node and its implementation as a pair |
 | `GD.LoadNodeWithImpl<NodeType, Implementation>(path)` | Load a PackedScene and instantiate the pair |
 
-The `Try` lookup methods handle missing, freed, or incompatible nodes with `None`. The throwing lookup methods report a contract failure. `GetRuntimeNode` checks the `RuntimeObject<NodeType, Implementation>` contract as well as the node type.
+The `Try` lookup methods handle missing, freed, or incompatible nodes and null implementations with `None`. The throwing lookup methods report a contract failure with `InvalidOperationException`. Godot path errors and exceptions from custom implementation getters propagate even through `Try` methods. A lookup reads the getter once.
 
-Scene helpers require `Implementation :> Impl<NodeType>`. If the instantiated root does not satisfy the requested contract, the created root is freed before the exception is raised.
+`GetRuntimeNode` checks the `RuntimeObject<NodeType, Implementation>` contract as well as the node type. These generic contracts are invariant: use the declared implementation type and node base type. The implementation-only helpers do not check the associated node type, and none of these helpers tracks arbitrary disposal of custom implementation objects.
+
+Scene helpers require `Implementation :> Impl<NodeType>`. The returned root belongs to the caller, who must manage its lifetime. If the instantiated root does not satisfy the requested contract, the created root is freed before the exception is raised. Loading, instantiation, and custom getter errors propagate.

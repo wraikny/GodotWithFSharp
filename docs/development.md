@@ -14,7 +14,7 @@ dotnet tool restore
 dotnet fsi build.fsx --target Format.Check
 ```
 
-`dotnet fsi build.fsx --target Format` formats F# sources. Build and Test also have FAKE wrappers; append `-- Release` to choose the Release configuration.
+`dotnet fsi build.fsx --target Format` formats F# sources and handwritten C# whitespace/encoding. Generated C# is formatted by Roslyn and managed by the output manifest. Build and Test also have FAKE wrappers; append `-- Release` to choose the Release configuration.
 
 | Target | Purpose |
 | --- | --- |
@@ -46,7 +46,7 @@ $env:GODOT_BIN = 'C:/Tools/Godot/Godot_v4.6.2-stable_mono_win64_console.exe'
 dotnet test GodotWithFSharp.sln --filter TestCategory=Godot
 ```
 
-With `GODOT_BIN` unset, only the engine test is skipped. An invalid path or incompatible engine version fails the test. Run `dotnet test GodotWithFSharp.sln` with the variable set to include the complete suite.
+With `GODOT_BIN` unset, the engine test is skipped. An invalid path or incompatible engine version fails the test. Run `dotnet test GodotWithFSharp.sln` with the variable set to include engine coverage.
 
 Engine checks cover headless editor import, simple and Vector2 defaults, scene overrides, example movement/reset, tree reentry, RequestReady, final disposal, and implementation lookup. They require successful exit codes and success markers, and reject engine errors or timeouts.
 
