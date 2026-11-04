@@ -22,12 +22,18 @@
   <Target Name="GenerateGodotWithFSharp" BeforeTargets="CoreCompile" DependsOnTargets="ResolveProjectReferences;ValidateGodotWithFSharpVersion" Condition="'$(DesignTimeBuild)' != 'true'">
     <ItemGroup>
       <_GodotWithFSharpImplementation Include="@(ProjectReference)" Condition="'%(ProjectReference.GodotWithFSharpImplementation)' == 'true'" />
+      <!-- ResolveProjectReferences has already applied solution mappings and framework selection. -->
+      <_GodotWithFSharpAssembly Include="@(_ResolvedProjectReferencePaths)" Condition="'%(_ResolvedProjectReferencePaths.GodotWithFSharpImplementation)' == 'true'">
+        <ImplementationProject>%(_ResolvedProjectReferencePaths.MSBuildSourceProjectFile)</ImplementationProject>
+      </_GodotWithFSharpAssembly>
+      <_GodotWithFSharpUnresolvedImplementation Include="@(_GodotWithFSharpImplementation)">
+        <ImplementationProject>%(_GodotWithFSharpImplementation.FullPath)</ImplementationProject>
+      </_GodotWithFSharpUnresolvedImplementation>
+      <_GodotWithFSharpUnresolvedImplementation Remove="@(_GodotWithFSharpAssembly)" MatchOnMetadata="ImplementationProject" MatchOnMetadataOptions="PathLike" />
     </ItemGroup>
     <Error Code="GFS204" Condition="'@(_GodotWithFSharpImplementation)' == ''" Text="Mark at least one ProjectReference with GodotWithFSharpImplementation=true." />
     <Error Code="GFS205" Condition="'$(GodotWithFSharpNamespace)' == ''" Text="Set GodotWithFSharpNamespace to the namespace for generated nodes." />
-    <MSBuild Projects="@(_GodotWithFSharpImplementation)" Targets="GetTargetPath" BuildInParallel="false" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=$(TargetFramework)">
-      <Output TaskParameter="TargetOutputs" ItemName="_GodotWithFSharpAssembly" />
-    </MSBuild>
+    <Error Code="GFS206" Condition="'@(_GodotWithFSharpUnresolvedImplementation)' != ''" Text="Implementation references must resolve to built assemblies (ReferenceOutputAssembly and BuildReference must be true): @(_GodotWithFSharpUnresolvedImplementation)." />
     <MSBuild Projects="$(_GodotWithFSharpToolProject)" Targets="GetTargetPath" RemoveProperties="$(_GodotWithFSharpHelperProperties)" Properties="Configuration=$(_GodotWithFSharpToolConfiguration);TargetFramework=net8.0">
       <Output TaskParameter="TargetOutputs" ItemName="_GodotWithFSharpToolAssembly" />
     </MSBuild>

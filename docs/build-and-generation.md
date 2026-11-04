@@ -19,6 +19,8 @@ Build implementation projects and generation tools
 
 Generation runs after project references are built and before `CoreCompile`. Refreshing Compile items includes files created on the first build and removes stale entries. DesignTimeBuild skips generation. Every normal generation checks ownership and hashes; unchanged source files retain their modification time.
 
+Implementation inputs come from MSBuild's resolved project-reference outputs, preserving solution configuration mappings, per-reference properties, and framework selection. A marked implementation must resolve as an assembly reference (`ReferenceOutputAssembly` and `BuildReference` must be true); unresolved inputs fail with `GFS206` instead of selecting another configuration's DLL.
+
 | Property | Default or purpose |
 | --- | --- |
 | `GodotWithFSharpNamespace` | Required namespace for generated nodes |
