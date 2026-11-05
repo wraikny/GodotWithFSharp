@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "Godot.SourceGenerators": {
+        "type": "Direct",
+        "requested": "[4.6.2, )",
+        "resolved": "4.6.2",
+        "contentHash": "CqSn9E38CqCvHARIpZXzYw/KkDKkrGjCYjRrKq3kTAIsDGOOZ/W9wiVnfbvmTpER7gbbrFKAd6WA201ELBynQw=="
+      },
+      "GodotSharp": {
+        "type": "Direct",
+        "requested": "[4.6.2, )",
+        "resolved": "4.6.2",
+        "contentHash": "yWYaxRtawrYOQ6TZqKovkw6IN3jNWLTjfrL+pvoGdprvGT7LOYdBCwy0OU7rSfzTn48Rr4IuyuZoSuC0Cp2JeA=="
+      },
+      "FSharp.Core": {
+        "type": "Transitive",
+        "resolved": "8.0.100",
+        "contentHash": "ZOVZ/o+jI3ormTZOa28Wh0tSRoyle1f7lKFcUN61sPiXI7eDZu8eSveFybgTeyIEyW0ujjp31cp7GOglDgsNEg=="
+      },
+      "godotwithfsharp": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[8.0.100, )",
+          "GodotSharp": "[4.6.2, )"
+        }
+      },
+      "integration.implementation": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[8.0.100, )",
+          "GodotWithFSharp": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+<Project>
+  <!-- Share only an explicitly named configuration file. Parent build policy is opt-in. -->
+  <PropertyGroup>
+    <GodotWithFSharpConfiguration Condition="'$(GodotWithFSharpConfiguration)' == ''">$([MSBuild]::GetPathOfFileAbove('GodotWithFSharp.props', '$(MSBuildThisFileDirectory)../'))</GodotWithFSharpConfiguration>
+    <_GodotWithFSharpParentBuildProps Condition="'$(GodotWithFSharpImportParentProps)' == 'true'">$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_GodotWithFSharpParentBuildProps>
+  </PropertyGroup>
+  <Import Project="$(_GodotWithFSharpParentBuildProps)" Condition="'$(_GodotWithFSharpParentBuildProps)' != ''" />
+  <Import Project="$(GodotWithFSharpConfiguration)" Condition="'$(GodotWithFSharpConfiguration)' != ''" />
+  <Import Project="$(MSBuildThisFileDirectory)build/GodotWithFSharp.props" />
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <FSharpCoreImplicitPackageVersion>8.0.100</FSharpCoreImplicitPackageVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GodotWithFSharpImportParentProps)' != 'true'">
+    <ImportDirectoryPackagesProps>false</ImportDirectoryPackagesProps>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

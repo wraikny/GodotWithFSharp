@@ -1,0 +1,21 @@
+{
+  "Version": 1,
+  "Owner": "Integration.Generated",
+  "Inputs": [
+    "Integration.Implementation.dll"
+  ],
+  "Files": [
+    {
+      "Name": "BorrowedProbe.cs",
+      "Hash": "1451CB04795611357F858A0D491546FBDF6C44480FBC10D597D599DE9BFDE4F5"
+    },
+    {
+      "Name": "HelperProbe.cs",
+      "Hash": "0BC3999CD0C318E3E8DF3AE12D7B1F0210002A13CDF620E9ABF8317781AEE94D"
+    },
+    {
+      "Name": "LifecycleProbe.cs",
+      "Hash": "5F301A232B2DEF6EF5EE73A076918A1408F8F2BE33A894F1F88D111D4DC240E7"
+    }
+  ]
+}

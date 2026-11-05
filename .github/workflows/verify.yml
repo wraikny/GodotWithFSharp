@@ -1,0 +1,78 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        sdk: [8.0.100, 8.0.x]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
+        with:
+          dotnet-version: ${{ matrix.sdk }}
+      - name: Download Godot .NET 4.6.2
+        run: |
+          $asset = if ($IsWindows) { 'Godot_v4.6.2-stable_mono_win64.zip' } else { 'Godot_v4.6.2-stable_mono_linux_x86_64.zip' }
+          $expected = if ($IsWindows) { '7c530d4b45d9f7aadd788b85a4d9dbdb5f2a239a72999afd7d29fda506fbedb6' } else { '7d53302c31648ad98b620e8ca5b0c869c1066495770e62b2fa770cfeb004f167' }
+          $archive = Join-Path $env:RUNNER_TEMP $asset
+          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.6.2-stable/$asset" -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne $expected) { throw 'Godot archive checksum mismatch.' }
+          $destination = Join-Path $env:RUNNER_TEMP 'godot'
+          Expand-Archive $archive -DestinationPath $destination
+          $pattern = if ($IsWindows) { '*_console.exe' } else { 'Godot_v4.6.2-stable_mono_linux.x86_64' }
+          $engine = (Get-ChildItem $destination -Recurse -File -Filter $pattern | Select-Object -First 1).FullName
+          if (-not $engine) { throw 'Godot .NET executable not found.' }
+          if (-not $IsWindows) { chmod +x $engine }
+          "GODOT_BIN=$engine" >> $env:GITHUB_ENV
+      - name: Restore locked dependencies
+        run: |
+          dotnet --version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet restore GodotWithFSharp.sln --locked-mode
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet restore example/apps/Godot/Example.csproj --locked-mode
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet restore test/GodotWithFSharp.Integration/Godot/Integration.csproj --locked-mode
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet tool restore
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Format and integration tests
+        run: |
+          dotnet fsi build.fsx --target Format.Check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet test GodotWithFSharp.sln --no-restore --logger "trx;LogFileName=tests.trx" -m:1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Export configurations
+        run: |
+          foreach ($configuration in @('ExportDebug', 'ExportRelease')) {
+            dotnet build example/apps/Godot/Example.csproj --configuration $configuration -p:RestoreLockedMode=true -m:1
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            dotnet build test/GodotWithFSharp.Integration/Godot/Integration.csproj --configuration $configuration -p:RestoreLockedMode=true -m:1
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+      - name: Pack and install tool
+        run: dotnet fsi build.fsx --target Distribution.Verify
+      - name: Check generated files and lock files
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.sdk }}
+          path: '**/TestResults/*.trx'

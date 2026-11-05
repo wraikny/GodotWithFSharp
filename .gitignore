@@ -401,3 +401,8 @@ FodyWeavers.xsd
 *.sln.iml
 
 /.vscode/*
+
+# Godot editor cache and .NET build output for the example
+/example/apps/Godot/.godot/
+/test/GodotWithFSharp.Integration/Godot/.godot/
+**/.godotwithfsharp.lock

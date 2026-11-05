@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>godot-fsharp-gen</ToolCommandName>
+    <Version>0.1.0</Version>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>Generate Godot C# nodes backed by F# implementations.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../../README.md" Pack="true" PackagePath="/" />
+    <Compile Include="Definitions.fs" />
+    <Compile Include="TypeIdentity.fs" />
+    <Compile Include="CSharpSyntax.fs" />
+    <Compile Include="ExportDefaults.fs" />
+    <Compile Include="Analysis.fs" />
+    <Compile Include="Metadata.fs" />
+    <Compile Include="Output.fs" />
+    <Compile Include="Generator.fs" />
+    <Compile Include="Program.fs" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+  </ItemGroup>
+</Project>

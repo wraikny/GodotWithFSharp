@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <_GodotWithFSharpPropsImported>true</_GodotWithFSharpPropsImported>
+    <GodotVersion Condition="'$(GodotVersion)' == ''">4.6.2</GodotVersion>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup><_GodotWithFSharpValidationImported>true</_GodotWithFSharpValidationImported></PropertyGroup>
+  <Target Name="ValidateGodotWithFSharpVersion" BeforeTargets="PrepareForBuild;CollectPackageReferences"
+          Condition="'$(UsingGodotNETSdk)' == 'true' and '$(GodotVersion)' != ''">
+    <Error Code="GFS200" Condition="'$(PackageVersion_GodotSharp)' != '$(GodotVersion)'"
+           Text="Godot.NET.Sdk provides GodotSharp $(PackageVersion_GodotSharp), but GodotVersion is $(GodotVersion). Align the SDK and shared GodotWithFSharp.props configuration." />
+    <Error Code="GFS201" Condition="'$(PackageVersion_Godot_SourceGenerators)' != '$(GodotVersion)'"
+           Text="Godot.SourceGenerators $(PackageVersion_Godot_SourceGenerators) does not match GodotVersion $(GodotVersion). Use a matching Godot.NET.Sdk." />
+  </Target>
+</Project>

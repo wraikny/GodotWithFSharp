@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "FSharp.Core": {
+        "type": "Direct",
+        "requested": "[8.0.100, )",
+        "resolved": "8.0.100",
+        "contentHash": "ZOVZ/o+jI3ormTZOa28Wh0tSRoyle1f7lKFcUN61sPiXI7eDZu8eSveFybgTeyIEyW0ujjp31cp7GOglDgsNEg=="
+      },
+      "GodotSharp": {
+        "type": "Transitive",
+        "resolved": "4.6.2",
+        "contentHash": "yWYaxRtawrYOQ6TZqKovkw6IN3jNWLTjfrL+pvoGdprvGT7LOYdBCwy0OU7rSfzTn48Rr4IuyuZoSuC0Cp2JeA=="
+      },
+      "godotwithfsharp": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[8.0.100, )",
+          "GodotSharp": "[4.6.2, )"
+        }
+      }
+    }
+  }
+}

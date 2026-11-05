@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Processes.fs" />
+    <Compile Include="BuildConfigurationTests.fs" />
+    <Compile Include="BuildIntegrationTests.fs" />
+    <Compile Include="BuildWarningTests.fs" />
+    <Compile Include="CliIntegrationTests.fs" />
+    <Compile Include="GodotIntegrationTests.fs" />
+    <Compile Include="InvalidFixtures.fs" />
+    <Compile Include="RefactoringTests.fs" />
+    <Compile Include="GeneratorTests.fs" />
+    <ProjectReference Include="../../src/tools/GodotWithFSharp.CodeGenerator/GodotWithFSharp.CodeGenerator.fsproj" />
+    <ProjectReference Include="Fixtures/GodotWithFSharp.Test.Fixtures.fsproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+config_version=5
+
+[application]
+config/name="GodotWithFSharp Integration"
+config/features=PackedStringArray("4.6", "C#", "GL Compatibility")
+
+[dotnet]
+project/assembly_name="Integration"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
