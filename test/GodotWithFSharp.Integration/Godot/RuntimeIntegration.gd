@@ -44,8 +44,8 @@ func _initialize():
     helper.free()
     observer.free()
     if not valid:
-        printerr("Lifecycle, reentry, or disposal contract failed.")
+        printerr("Runtime integration contract failed: export defaults, lifecycle/disposal, or implementation lookup.")
         quit(1)
         return
-    print("LIFECYCLE_OK")
+    print("RUNTIME_INTEGRATION_OK")
     quit(0)

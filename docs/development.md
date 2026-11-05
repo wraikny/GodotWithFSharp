@@ -33,6 +33,7 @@ dotnet fsi build.fsx --target Format.Check
 | `test/GodotWithFSharp.Test` | Generator validation, syntax, output ownership/recovery, configuration, separate CLI processes, and real C# compilation |
 | `test/GodotWithFSharp.Test/Fixtures` | A separately compiled F# input assembly for DLL inspection and generation tests |
 | `test/GodotWithFSharp.Integration` | F# implementations, generated C# scripts, and Godot lifecycle/runtime-helper checks |
+| [RuntimeIntegration.gd](../test/GodotWithFSharp.Integration/Godot/RuntimeIntegration.gd) | Godot-side runner for export defaults, negative-zero preservation, tree reentry, disposal, and implementation lookup |
 | `test/GodotWithFSharp.Test/Godot` | Engine-side checks of example export defaults and serialized scene values |
 
 The standard suite also creates a fresh consumer project to check first-build generation, incremental output, additions/removals, and protection against manual edits.
@@ -49,6 +50,8 @@ dotnet test GodotWithFSharp.sln --filter TestCategory=Godot
 With `GODOT_BIN` unset, the engine test is skipped. An invalid path or incompatible engine version fails the test. Run `dotnet test GodotWithFSharp.sln` with the variable set to include engine coverage.
 
 Engine checks cover headless editor import, simple and Vector2 defaults, scene overrides, example movement/reset, tree reentry, RequestReady, final disposal, and implementation lookup. They require successful exit codes and success markers, and reject engine errors or timeouts.
+
+The F# test harness invokes `res://RuntimeIntegration.gd` with `--script` in the integration project and requires the `RUNTIME_INTEGRATION_OK` marker. This runner covers the runtime contracts above, while `GodotWithFSharp.Test/Godot/ExportDefaults.gd` checks the example's editor defaults and serialized scene values.
 
 ## Default-value regression coverage
 

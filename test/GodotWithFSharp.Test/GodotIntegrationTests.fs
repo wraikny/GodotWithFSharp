@@ -70,6 +70,11 @@ let ``Godot editor defaults scene values lifecycle and runtime helpers work toge
     let integration = Path.Combine(repository, "test/GodotWithFSharp.Integration/Godot")
     build (Path.Combine(integration, "Integration.csproj"))
     run integration "integration-import" [ "--editor"; "--import" ] ""
-    run integration "lifecycle" [ "--script"; "res://Lifecycle.gd"; "--quit-after"; "120" ] "LIFECYCLE_OK"
+
+    run
+      integration
+      "runtime-integration"
+      [ "--script"; "res://RuntimeIntegration.gd"; "--quit-after"; "120" ]
+      "RUNTIME_INTEGRATION_OK"
   finally
     Directory.Delete(logs, true)
